@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">MCP Inspector</h1>
   <p align="center">
-    <strong>Know what you're trusting before you run it.</strong>
+    <strong>Audit and enforce security policies on MCP servers before you trust them.</strong>
   </p>
   <p align="center">
     <a href="https://www.npmjs.com/package/mcp-inspector"><img src="https://img.shields.io/npm/v/mcp-inspector.svg" alt="npm version"></a>
@@ -12,12 +12,10 @@
 
 ---
 
-Every developer using AI agents adds MCP servers to their setup. These servers run **third-party code** with access to your files, credentials, and shell. Nobody audits them before trusting them.
-
-**MCP Inspector connects to any MCP server and shows you exactly what it exposes.** One command, zero config, instant visibility.
+MCP servers run third-party code with access to your files, credentials, and shell. MCP Inspector connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
 
 ```bash
-npx mcp-inspector npx @modelcontextprotocol/server-github
+npx mcp-inspector --policy .mcp-policy.yml npx @modelcontextprotocol/server-github
 ```
 
 ## Demo
@@ -25,39 +23,86 @@ npx mcp-inspector npx @modelcontextprotocol/server-github
 ```
 🔍 MCP Inspector v0.1.0
 
-📦 Server: github-mcp-server v0.1.0 | Tools: 12
-   8 read • 3 write • 1 admin
+📦 Server: github-mcp-server v0.1.0
+   Capabilities: tools
 
-🔧 Tools
+🔧 Tools (12)  8 read • 3 write • 1 admin
 
   ✅ get_file_contents       Read files from a repository
-  ✅ list_commits             List commits in a repository
   ✅ search_repositories      Search for GitHub repositories
-  ✏️ push_files              Write files to repo [WRITE]
-  ✏️ create_or_update_file   Create or update a single file [WRITE]
-  ⚠️ delete_repository       Delete a repository [ADMIN]
+  ✏️ push_files              Write files to repo [write]
+  ⚠️ delete_repository       Delete a repository [admin]
 
-🛡️  Aguara Security Analysis
+🛡️  Policy: .mcp-policy.yml
 
-  CRITICAL MCP_001  Tool description injection
-  HIGH     EXFIL_002 Sensitive file read pattern
+  ❌ github-mcp-server: policy FAILED (2 violations)
 
-  Found 2 issues: 1 critical, 1 high
-
-Scanned in 1842ms
-
-🌐 Deep scan: https://aguarascan.com
+     ✖ [deny.categories] Tool 'delete_repository' has denied category 'admin'
+     ✖ [deny.tools] Tool 'push_files' matches denied pattern 'push_*'
 ```
+
+**Exit code 2** — your CI pipeline stops here.
 
 ## Why
 
-MCP servers are the new npm packages for AI agents. You `npm install` them into your workflow and hope for the best. But unlike npm packages:
+Every MCP client already shows you the tool list. MCP Inspector goes further:
 
-- There's no `package.json` showing what they access
-- There's no permission model — a server can expose `delete_everything` and your agent will call it
-- Most developers never read the tool list before granting access
+| Feature | MCP Client | MCP Inspector |
+|---------|-----------|---------------|
+| See tool list | Yes | Yes |
+| Security policy enforcement | No | **Yes** |
+| CI/CD pipeline gate | No | **Yes** |
+| Drift detection between versions | No | **Yes** |
+| Fleet scan (all configured servers) | No | **Yes** |
+| Deep security analysis (aguara) | No | **Yes** |
+| Exportable reports (JSON/Markdown) | No | **Yes** |
 
-MCP Inspector gives you **runtime introspection** — it connects to the live server, lists every tool it exposes, and categorizes them by capability (read, write, admin).
+## Policy Enforcement
+
+Define what's allowed in `.mcp-policy.yml`:
+
+```yaml
+# Block dangerous capabilities
+deny:
+  categories:
+    - admin                    # No admin tools (delete, exec, shell)
+  tools:
+    - "execute_*"              # Block all execution patterns
+    - "push_*"                 # Block push operations
+
+# Requirements
+require:
+  aguara: clean                # Zero security findings required
+  maxTools: 20                 # Limit attack surface
+
+# Exceptions
+allow:
+  tools:
+    - "execute_query"          # Allow specific tools even if pattern-denied
+```
+
+Run it:
+
+```bash
+# Explicit policy file
+npx mcp-inspector --policy .mcp-policy.yml npx @mcp/server
+
+# Auto-detect .mcp-policy.yml in current directory
+npx mcp-inspector --policy npx @mcp/server
+
+# CI pipeline: fail build on policy violations (exit code 2)
+npx mcp-inspector --policy .mcp-policy.yml npx @mcp/server
+```
+
+### Policy Rules
+
+| Rule | Description |
+|------|-------------|
+| `deny.categories` | Block tools by category: `read`, `write`, `admin` |
+| `deny.tools` | Block tools by name or glob pattern (`delete_*`, `exec*`) |
+| `require.aguara` | Require aguara scan with zero findings (`clean`) |
+| `require.maxTools` | Maximum number of tools a server can expose |
+| `allow.tools` | Exception list — allow specific tools even if they match deny rules |
 
 ## How it works
 
@@ -70,20 +115,16 @@ MCP Inspector gives you **runtime introspection** — it connects to the live se
 │ mcp-      │ HTTP/   ┌────────────────┐
 │ inspector │ SSE     │  MCP Server    │
 │           ├──────── │  (remote)      │
-│ Connect   │         └────────────────┘
-│ Introspect│
-│ Categorize│         ┌──────────────────┐
-│ Diff      │ ──────► │  Aguara (if       │
-│ Report    │         │  installed)       │
-└───────────┘         │  177 rules, NLP,  │
-                      │  toxic-flow       │
-                      └──────────────────┘
+│ Scan      │         └────────────────┘
+│ Enforce   │
+│ Diff      │         ┌──────────────────┐
+│ Report    │ ──────► │  Aguara (177      │
+└───────────┘         │  security rules)  │
+     │                └──────────────────┘
+     ▼
+ .mcp-policy.yml
+ (deny / require / allow)
 ```
-
-**MCP Inspector** handles runtime introspection (connect, list, categorize).
-**[Aguara](https://github.com/garagon/aguara)** handles deep security analysis (prompt injection, exfiltration, supply chain, credential leaks).
-
-When Aguara is installed, MCP Inspector automatically passes tool descriptions through it. When it's not, you still get full tool visibility with a link to install Aguara.
 
 ## Install & Use
 
@@ -98,21 +139,22 @@ npx mcp-inspector <command> [args...]
 # Scan any MCP server
 npx mcp-inspector npx @modelcontextprotocol/server-github
 npx mcp-inspector npx @modelcontextprotocol/server-filesystem /tmp
-npx mcp-inspector node ./my-server.js
 
-# Scan all servers from your config (Claude Desktop, Cursor, Windsurf, etc.)
+# Enforce a security policy (exit code 2 on violations)
+npx mcp-inspector --policy .mcp-policy.yml npx @mcp/server
+
+# Scan all servers from your config (Claude Desktop, Cursor, Windsurf)
 npx mcp-inspector --config
 
 # Scan remote servers via HTTP
 npx mcp-inspector http://localhost:3000/mcp
-npx mcp-inspector http://localhost:3000/sse --transport sse
-
-# Scan multiple servers at once
-npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
 
 # Diff mode: detect runtime changes
 npx mcp-inspector npx @mcp/server --json > baseline.json
 npx mcp-inspector npx @mcp/server --diff baseline.json
+
+# Scan multiple servers at once
+npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
 
 # JSON output for CI/CD pipelines
 npx mcp-inspector --json npx @modelcontextprotocol/server-github
@@ -129,30 +171,19 @@ Install [Aguara](https://github.com/garagon/aguara) to unlock deep security anal
 curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
 ```
 
-MCP Inspector auto-detects Aguara and runs its 177-rule engine against tool descriptions. No extra flags needed.
-
-## Tool Categories
-
-MCP Inspector categorizes every tool by capability:
-
-| Category | Icon | Meaning |
-|----------|------|---------|
-| **read** | ✅ | Read-only operations (list, get, search) |
-| **write** | ✏️ | Can modify state (create, update, push, upload) |
-| **admin** | ⚠️ | Destructive or execution capability (delete, exec, shell) |
-
-This is **categorization for visibility**, not security analysis. For security, use Aguara.
+MCP Inspector auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
 
 ## Options
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Structured JSON output for scripting and CI |
-| `--markdown <file>` | Export report as Markdown file |
+| `--policy <file>` | Enforce security policy (auto-detects `.mcp-policy.yml`) |
+| `--config` | Auto-detect and scan servers from config files |
 | `--diff <file.json>` | Compare against a previous JSON scan |
 | `--transport <type>` | Force transport: `stdio`, `sse`, `streamable-http` |
-| `--config` | Auto-detect and scan servers from config files |
-| `--fail-on-findings` | Exit code 2 if aguara finds security issues (for CI) |
+| `--json` | Structured JSON output for scripting and CI |
+| `--markdown <file>` | Export report as Markdown file |
+| `--fail-on-findings` | Exit code 2 if aguara finds security issues |
 | `--no-color` | Disable colored output |
 | `--timeout <ms>` | Connection timeout in ms (default: 30000) |
 | `-h, --help` | Show help |
@@ -166,7 +197,7 @@ MCP Inspector is part of the [Aguara](https://github.com/garagon/aguara) securit
 |------|-------------|
 | **[Aguara](https://github.com/garagon/aguara)** | Security scanner — 177 rules, NLP, toxic-flow analysis |
 | **[Aguara MCP](https://github.com/garagon/aguara-mcp)** | MCP server — gives AI agents security scanning as a tool |
-| **MCP Inspector** | Runtime introspection — connect to any MCP server, see what it exposes |
+| **MCP Inspector** | Policy enforcement — audit, enforce, and monitor MCP servers |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform — continuous monitoring of MCP registries |
 
 ## Roadmap
@@ -175,14 +206,14 @@ MCP Inspector is part of the [Aguara](https://github.com/garagon/aguara) securit
 - [x] Tool categorization (read/write/admin)
 - [x] Aguara integration for deep analysis
 - [x] Multi-server scanning
-- [x] Markdown report export
-- [x] JSON output
-- [x] GitHub Actions CI
 - [x] HTTP/SSE transport support
 - [x] Diff mode: compare server versions
-- [x] Config file auto-detection (Claude Desktop, Cursor, Windsurf, etc.)
+- [x] Config file auto-detection (Claude Desktop, Cursor, Windsurf)
+- [x] **Policy enforcement engine**
+- [ ] Policy: per-server overrides
 - [ ] Registry integration (Smithery, mcp.run)
 - [ ] VS Code extension
+- [ ] GitHub Action (reusable workflow)
 
 ## Contributing
 

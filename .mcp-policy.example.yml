@@ -1,0 +1,26 @@
+# MCP Inspector Security Policy
+# Copy this file as .mcp-policy.yml and customize for your environment.
+#
+# Usage:
+#   npx mcp-inspector --policy .mcp-policy.yml npx @mcp/server
+#   npx mcp-inspector --policy npx @mcp/server  (auto-detects .mcp-policy.yml)
+
+# Deny rules — block tools that match these criteria
+deny:
+  categories:
+    - admin                    # Block admin tools (delete, exec, shell, deploy)
+  tools:
+    - "execute_*"              # Block execution patterns
+    - "run_*"                  # Block run patterns
+    - "shell_*"               # Block shell access
+
+# Requirements — the server must meet these conditions
+require:
+  aguara: clean                # Zero security findings from aguara
+  maxTools: 30                 # Limit server attack surface
+
+# Exceptions — allow specific tools even if they match deny rules
+allow:
+  tools:
+    - "execute_query"          # SQL queries are fine
+    - "run_tests"              # Running tests is safe
