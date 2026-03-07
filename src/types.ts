@@ -96,10 +96,10 @@ export interface ScanResult {
   scanDuration: number;
 }
 
-export interface ServerTarget {
-  command: string;
-  args: string[];
-}
+export type ServerTarget =
+  | { type: "stdio"; command: string; args: string[] }
+  | { type: "sse"; url: string }
+  | { type: "streamable-http"; url: string };
 
 export interface CliOptions {
   targets: ServerTarget[];

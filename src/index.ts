@@ -11,9 +11,16 @@ import { formatOutput, formatJson, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
 import type { ScanResult, ServerTarget } from "./types.js";
 
+function targetLabel(target: ServerTarget): string {
+  if (target.type === "stdio") {
+    return `${target.command} ${target.args.join(" ")}`.trim();
+  }
+  return target.url;
+}
+
 async function scanServer(target: ServerTarget, timeout: number): Promise<ScanResult> {
   const startTime = Date.now();
-  const connection = await connectToServer(target.command, target.args, timeout);
+  const connection = await connectToServer(target, timeout);
 
   try {
     const server = getServerInfo(connection.client);
@@ -61,7 +68,7 @@ async function main(): Promise<void> {
         console.log(formatOutput(result));
       }
     } catch (err) {
-      const label = `${target.command} ${target.args.join(" ")}`.trim();
+      const label = targetLabel(target);
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error(formatError(`[${label}] ${message}`));
     }
