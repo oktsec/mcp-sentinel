@@ -36,10 +36,10 @@ EXAMPLES
   npx mcp-sentinel http://localhost:3000/mcp
   npx mcp-sentinel http://localhost:3000/sse --transport sse
   npx mcp-sentinel node my-server.js --json
-  npx mcp-sentinel npx @mcp/server-a --- npx @mcp/server-b
+  npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --- npx @modelcontextprotocol/server-github
   npx mcp-sentinel --config
-  npx mcp-sentinel npx @mcp/server --json > baseline.json
-  npx mcp-sentinel npx @mcp/server --diff baseline.json
+  npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --json > baseline.json
+  npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --diff baseline.json
 `.trim();
 
 function isUrl(value: string): boolean {
