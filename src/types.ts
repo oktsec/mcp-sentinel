@@ -1,4 +1,4 @@
-export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type ToolCategory = "read" | "write" | "admin";
 
 export interface ToolInfo {
   name: string;
@@ -6,25 +6,23 @@ export interface ToolInfo {
   inputSchema?: Record<string, unknown>;
 }
 
-export interface ToolFlag {
-  type: "destructive" | "write" | "execute" | "network" | "credential";
-  label: string;
-  reason: string;
-}
-
 export interface AnalyzedTool {
   tool: ToolInfo;
-  flags: ToolFlag[];
-  safe: boolean;
+  category: ToolCategory;
 }
 
-export interface RiskReason {
-  message: string;
+export interface AguaraFinding {
+  severity: string;
+  ruleId: string;
+  ruleName: string;
+  matchedText: string;
+  line?: number;
 }
 
-export interface RiskAssessment {
-  level: RiskLevel;
-  reasons: RiskReason[];
+export interface AguaraResult {
+  available: boolean;
+  findings: AguaraFinding[];
+  summary: string;
 }
 
 export interface ServerInfo {
@@ -35,15 +33,20 @@ export interface ServerInfo {
 export interface ScanResult {
   server: ServerInfo;
   tools: AnalyzedTool[];
-  risk: RiskAssessment;
-  envVars: string[];
+  toolSummary: { read: number; write: number; admin: number };
+  aguara: AguaraResult;
   scanDuration: number;
 }
 
-export interface CliOptions {
+export interface ServerTarget {
   command: string;
   args: string[];
+}
+
+export interface CliOptions {
+  targets: ServerTarget[];
   json: boolean;
+  markdown: string | false;
   noColor: boolean;
   timeout: number;
 }

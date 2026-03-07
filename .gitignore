@@ -3,6 +3,23 @@ dist/
 *.tgz
 .DS_Store
 *.log
+coverage/
+
+# Secrets and environment
 .env
 .env.*
-coverage/
+
+# Internal project docs (PRD, specs, notes)
+DOCS/
+
+# Claude Code project config
+CLAUDE.md
+.claude/
+
+# Editor and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
