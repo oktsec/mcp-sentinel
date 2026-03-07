@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeTools, detectEnvVars, assessRisk } from "../analyzer.js";
+import { analyzeTools, analyzeSchema, detectEnvVars, assessRisk } from "../analyzer.js";
 import type { ToolInfo } from "../types.js";
 
 describe("analyzeTools", () => {
@@ -58,6 +58,93 @@ describe("analyzeTools", () => {
     const types = result[0]!.flags.map((f) => f.type);
     expect(types).toContain("destructive");
     expect(types).toContain("execute");
+  });
+});
+
+describe("analyzeSchema", () => {
+  it("flags command parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { command: { type: "string" } },
+    });
+    expect(flags).toContainEqual(
+      expect.objectContaining({ type: "schema", reason: expect.stringContaining("command") }),
+    );
+  });
+
+  it("flags code/query parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { sql: { type: "string" }, code: { type: "string" } },
+    });
+    expect(flags).toHaveLength(2);
+    expect(flags[0]!.reason).toContain("sql");
+    expect(flags[1]!.reason).toContain("code");
+  });
+
+  it("flags URL parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { url: { type: "string" }, callback_url: { type: "string" } },
+    });
+    expect(flags).toHaveLength(2);
+  });
+
+  it("flags filesystem path parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { file_path: { type: "string" }, dest: { type: "string" } },
+    });
+    expect(flags).toHaveLength(2);
+  });
+
+  it("does not flag generic path parameter", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { path: { type: "string" } },
+    });
+    expect(flags).toHaveLength(0);
+  });
+
+  it("flags credential parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { password: { type: "string" }, api_key: { type: "string" } },
+    });
+    expect(flags).toHaveLength(2);
+  });
+
+  it("returns empty for safe parameters", () => {
+    const flags = analyzeSchema({
+      type: "object",
+      properties: { name: { type: "string" }, count: { type: "number" } },
+    });
+    expect(flags).toHaveLength(0);
+  });
+
+  it("returns empty for undefined schema", () => {
+    const flags = analyzeSchema(undefined);
+    expect(flags).toHaveLength(0);
+  });
+
+  it("returns empty for schema without properties", () => {
+    const flags = analyzeSchema({ type: "object" });
+    expect(flags).toHaveLength(0);
+  });
+
+  it("integrates with analyzeTools", () => {
+    const tools: ToolInfo[] = [{
+      name: "safe_tool",
+      description: "A safe looking tool",
+      inputSchema: {
+        type: "object",
+        properties: { command: { type: "string" }, shell_command: { type: "string" } },
+      },
+    }];
+    const result = analyzeTools(tools);
+    expect(result[0]!.safe).toBe(false);
+    const schemaFlags = result[0]!.flags.filter((f) => f.type === "schema");
+    expect(schemaFlags.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -127,6 +214,18 @@ describe("assessRisk", () => {
     const analyzed = analyzeTools(tools);
     const risk = assessRisk(analyzed, []);
     expect(risk.level).toBe("LOW");
+  });
+
+  it("returns MEDIUM for 3+ tools with dangerous params", () => {
+    const tools: ToolInfo[] = [
+      { name: "a", description: "Tool a", inputSchema: { type: "object", properties: { command: { type: "string" } } } },
+      { name: "b", description: "Tool b", inputSchema: { type: "object", properties: { sql: { type: "string" } } } },
+      { name: "c", description: "Tool c", inputSchema: { type: "object", properties: { url: { type: "string" } } } },
+    ];
+    const analyzed = analyzeTools(tools);
+    const risk = assessRisk(analyzed, []);
+    expect(risk.level).toBe("MEDIUM");
+    expect(risk.reasons.some((r) => r.message.includes("dangerous input parameters"))).toBe(true);
   });
 
   it("includes env var reasons when present", () => {

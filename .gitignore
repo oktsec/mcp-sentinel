@@ -10,8 +10,7 @@ coverage/
 .env.*
 
 # Internal project docs (PRD, specs, notes)
-DOCS*/
-docs-internal/
+DOCS/
 
 # Claude Code project config
 CLAUDE.md

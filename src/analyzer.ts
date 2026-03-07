@@ -5,6 +5,7 @@ import type {
   RiskAssessment,
   RiskLevel,
   RiskReason,
+  FlagType,
 } from "./types.js";
 
 const DESTRUCTIVE_PATTERNS = [
@@ -71,11 +72,53 @@ const CREDENTIAL_PATTERNS = [
 
 const ENV_VAR_PATTERN = /\b[A-Z][A-Z0-9_]{2,}\b/g;
 
+// Dangerous parameter names in tool input schemas
+const DANGEROUS_PARAM_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /^(command|cmd|shell_command|bash_command)$/i, label: "accepts shell command" },
+  { pattern: /^(script|code|expression|query|sql)$/i, label: "accepts code/query input" },
+  { pattern: /^(url|uri|endpoint|webhook_url|callback_url)$/i, label: "accepts arbitrary URL" },
+  { pattern: /^(file_path|dir_path|dest|destination|target_path|source_path)$/i, label: "accepts filesystem path" },
+  { pattern: /^(password|secret|token|api_key|credentials?)$/i, label: "accepts sensitive credential" },
+  { pattern: /^(body|payload|data|raw_input)$/i, label: "accepts raw input payload" },
+];
+
 function matchPatterns(
   text: string,
   patterns: RegExp[],
 ): RegExp | undefined {
   return patterns.find((p) => p.test(text));
+}
+
+function extractSchemaParams(schema: Record<string, unknown>): string[] {
+  const properties = schema["properties"];
+  if (typeof properties !== "object" || properties === null) {
+    return [];
+  }
+  return Object.keys(properties as Record<string, unknown>);
+}
+
+export function analyzeSchema(schema: Record<string, unknown> | undefined): ToolFlag[] {
+  if (schema === undefined) {
+    return [];
+  }
+
+  const params = extractSchemaParams(schema);
+  const flags: ToolFlag[] = [];
+
+  for (const param of params) {
+    for (const { pattern, label } of DANGEROUS_PARAM_PATTERNS) {
+      if (pattern.test(param)) {
+        flags.push({
+          type: "schema",
+          label: "DANGEROUS PARAM",
+          reason: `Parameter "${param}": ${label}`,
+        });
+        break;
+      }
+    }
+  }
+
+  return flags;
 }
 
 function analyzeTool(tool: ToolInfo): AnalyzedTool {
@@ -127,6 +170,9 @@ function analyzeTool(tool: ToolInfo): AnalyzedTool {
     });
   }
 
+  const schemaFlags = analyzeSchema(tool.inputSchema);
+  flags.push(...schemaFlags);
+
   return {
     tool,
     flags,
@@ -169,21 +215,14 @@ export function assessRisk(
 ): RiskAssessment {
   const reasons: RiskReason[] = [];
 
-  const destructiveCount = analyzedTools.filter((t) =>
-    t.flags.some((f) => f.type === "destructive"),
-  ).length;
+  const countByType = (type: FlagType): number =>
+    analyzedTools.filter((t) => t.flags.some((f) => f.type === type)).length;
 
-  const executeCount = analyzedTools.filter((t) =>
-    t.flags.some((f) => f.type === "execute"),
-  ).length;
-
-  const writeCount = analyzedTools.filter((t) =>
-    t.flags.some((f) => f.type === "write"),
-  ).length;
-
-  const networkCount = analyzedTools.filter((t) =>
-    t.flags.some((f) => f.type === "network"),
-  ).length;
+  const destructiveCount = countByType("destructive");
+  const executeCount = countByType("execute");
+  const writeCount = countByType("write");
+  const networkCount = countByType("network");
+  const schemaCount = countByType("schema");
 
   if (destructiveCount > 0) {
     reasons.push({
@@ -209,13 +248,19 @@ export function assessRisk(
     });
   }
 
+  if (schemaCount > 0) {
+    reasons.push({
+      message: `${schemaCount} tool${schemaCount > 1 ? "s" : ""} with dangerous input parameters`,
+    });
+  }
+
   if (envVars.length > 0) {
     reasons.push({
       message: `Possible environment dependencies: ${envVars.join(", ")}`,
     });
   }
 
-  const level = computeRiskLevel(destructiveCount, executeCount, writeCount, networkCount);
+  const level = computeRiskLevel(destructiveCount, executeCount, writeCount, networkCount, schemaCount);
 
   if (reasons.length === 0) {
     reasons.push({ message: "No risky patterns detected" });
@@ -229,14 +274,15 @@ function computeRiskLevel(
   execute: number,
   write: number,
   network: number,
+  schema: number,
 ): RiskLevel {
-  // HIGH: any code execution, or 3+ destructive ops
+  // HIGH: any code execution, or 3+ destructive ops, or dangerous params with exec-like tools
   if (execute > 0 || destructive >= 3) {
     return "HIGH";
   }
 
-  // MEDIUM: any destructive op, or significant write + network combo
-  if (destructive > 0 || (write >= 2 && network >= 2)) {
+  // MEDIUM: any destructive op, significant write + network combo, or dangerous params
+  if (destructive > 0 || (write >= 2 && network >= 2) || schema >= 3) {
     return "MEDIUM";
   }
 

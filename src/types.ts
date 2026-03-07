@@ -6,8 +6,10 @@ export interface ToolInfo {
   inputSchema?: Record<string, unknown>;
 }
 
+export type FlagType = "destructive" | "write" | "execute" | "network" | "credential" | "schema";
+
 export interface ToolFlag {
-  type: "destructive" | "write" | "execute" | "network" | "credential";
+  type: FlagType;
   label: string;
   reason: string;
 }
