@@ -42,6 +42,7 @@ describe("parseArgs", () => {
       markdown: false,
       noColor: false,
       timeout: 30_000,
+      diff: false,
     });
   });
 

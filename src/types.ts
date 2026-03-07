@@ -101,10 +101,25 @@ export type ServerTarget =
   | { type: "sse"; url: string }
   | { type: "streamable-http"; url: string };
 
+// --- Diff ---
+
+export interface DiffEntry {
+  kind: "added" | "removed" | "changed";
+  area: "tool" | "resource" | "resource-template" | "prompt" | "capability" | "instruction" | "version";
+  name: string;
+  detail?: string;
+}
+
+export interface DiffResult {
+  server: string;
+  entries: DiffEntry[];
+}
+
 export interface CliOptions {
   targets: ServerTarget[];
   json: boolean;
   markdown: string | false;
   noColor: boolean;
   timeout: number;
+  diff: string | false;
 }

@@ -18,6 +18,7 @@ TRANSPORTS
 
 OPTIONS
   --transport <type>   Force transport type: stdio, sse, streamable-http
+  --diff <file.json>   Compare current scan against a previous JSON scan
   --json               Output results as JSON
   --markdown <file>    Export report as markdown file
   --no-color           Disable colored output
@@ -32,6 +33,8 @@ EXAMPLES
   npx mcp-inspector http://localhost:3000/sse --transport sse
   npx mcp-inspector node my-server.js --json
   npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
+  npx mcp-inspector npx @mcp/server --json > baseline.json
+  npx mcp-inspector npx @mcp/server --diff baseline.json
 `.trim();
 
 function isUrl(value: string): boolean {
@@ -92,10 +95,23 @@ export function parseArgs(argv: string[]): CliOptions | null {
     transportOverride = transportVal;
   }
 
+  let diff: string | false = false;
+  const diffIdx = args.indexOf("--diff");
+  if (diffIdx !== -1) {
+    const diffVal = args[diffIdx + 1];
+    if (diffVal === undefined || diffVal.startsWith("--")) {
+      console.error("Error: --diff requires a JSON file path");
+      process.exit(1);
+    }
+    diff = diffVal;
+  }
+
+  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff"]);
+
   const filteredArgs = args.filter((arg, i) => {
     if (arg === "--json" || arg === "--no-color") return false;
-    if (arg === "--timeout" || arg === "--markdown" || arg === "--transport") return false;
-    if (i > 0 && (args[i - 1] === "--timeout" || args[i - 1] === "--markdown" || args[i - 1] === "--transport")) return false;
+    if (FLAG_ARGS.has(arg)) return false;
+    if (i > 0 && FLAG_ARGS.has(args[i - 1]!)) return false;
     return true;
   });
 
@@ -111,7 +127,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout };
+  return { targets, json, markdown, noColor, timeout, diff };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {

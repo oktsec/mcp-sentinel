@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "./cli.js";
 import {
   connectToServer, getServerInfo, getServerCapabilities,
@@ -7,8 +7,9 @@ import {
 } from "./scanner.js";
 import { analyzeTools, summarize } from "./analyzer.js";
 import { scanWithAguara } from "./aguara.js";
-import { formatOutput, formatJson, formatError } from "./formatter.js";
+import { formatOutput, formatJson, formatDiff, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
+import { diffScans } from "./diff.js";
 import type { ScanResult, ServerTarget } from "./types.js";
 
 function targetLabel(target: ServerTarget): string {
@@ -49,6 +50,11 @@ async function scanServer(target: ServerTarget, timeout: number): Promise<ScanRe
   }
 }
 
+async function loadBaseline(filePath: string): Promise<ScanResult> {
+  const raw = await readFile(filePath, "utf-8");
+  return JSON.parse(raw) as ScanResult;
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv);
   if (options === null) return;
@@ -64,7 +70,7 @@ async function main(): Promise<void> {
       const result = await scanServer(target, options.timeout);
       results.push(result);
 
-      if (!options.json) {
+      if (!options.json && options.diff === false) {
         console.log(formatOutput(result));
       }
     } catch (err) {
@@ -77,6 +83,20 @@ async function main(): Promise<void> {
   if (results.length === 0) {
     console.error(formatError("No servers were scanned successfully."));
     process.exit(1);
+  }
+
+  // Diff mode
+  if (options.diff !== false) {
+    const baseline = await loadBaseline(options.diff);
+    for (const current of results) {
+      const diff = diffScans(baseline, current);
+      if (options.json) {
+        console.log(JSON.stringify(diff, null, 2));
+      } else {
+        console.log(formatDiff(diff));
+      }
+    }
+    return;
   }
 
   if (options.json) {

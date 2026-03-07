@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import type {
-  ScanResult, AnalyzedTool, AguaraFinding,
+  ScanResult, AnalyzedTool, AguaraFinding, DiffResult,
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities,
 } from "./types.js";
 
@@ -159,6 +159,36 @@ export function formatOutput(result: ScanResult): string {
 
 export function formatJson(result: ScanResult | ScanResult[]): string {
   return JSON.stringify(result, null, 2);
+}
+
+export function formatDiff(diff: DiffResult): string {
+  const lines: string[] = [];
+
+  lines.push("");
+  lines.push(`\u{1F504} ${chalk.bold("MCP Inspector Diff")} — ${chalk.bold(diff.server)}`);
+  lines.push("");
+
+  if (diff.entries.length === 0) {
+    lines.push(`  ${chalk.green("No changes detected.")}`);
+    lines.push("");
+    return lines.join("\n");
+  }
+
+  for (const entry of diff.entries) {
+    const icon = entry.kind === "added" ? chalk.green("+")
+      : entry.kind === "removed" ? chalk.red("-")
+      : chalk.yellow("~");
+    const label = entry.kind === "added" ? chalk.green(entry.kind)
+      : entry.kind === "removed" ? chalk.red(entry.kind)
+      : chalk.yellow(entry.kind);
+    const detail = entry.detail !== undefined ? chalk.dim(` (${entry.detail})`) : "";
+    lines.push(`  ${icon} [${entry.area}] ${label}: ${entry.name}${detail}`);
+  }
+
+  lines.push("");
+  lines.push(chalk.dim(`${diff.entries.length} change(s) detected`));
+  lines.push("");
+  return lines.join("\n");
 }
 
 export function formatError(message: string): string {
