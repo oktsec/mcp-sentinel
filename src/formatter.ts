@@ -34,7 +34,8 @@ function box(text: string): string {
 }
 
 function stripAnsi(str: string): string {
-  return str.replace(/\x1b\[[0-9;]*m/g, "");
+  const ESC = String.fromCharCode(27);
+  return str.split(ESC).map((s) => s.replace(/\[[0-9;]*m/, "")).join("");
 }
 
 function rightAlign(left: string, right: string, width: number): string {
