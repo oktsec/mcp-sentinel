@@ -34,15 +34,26 @@ describe("parseArgs", () => {
     expect(consoleSpy).toHaveBeenCalledWith("0.1.0");
   });
 
-  it("parses basic command", () => {
+  it("parses a single server target", () => {
     const result = parseArgs(["node", "mcp-inspector", "npx", "@mcp/server"]);
     expect(result).toEqual({
-      command: "npx",
-      args: ["@mcp/server"],
+      targets: [{ command: "npx", args: ["@mcp/server"] }],
       json: false,
+      markdown: false,
       noColor: false,
       timeout: 30_000,
     });
+  });
+
+  it("parses multiple server targets separated by ---", () => {
+    const result = parseArgs([
+      "node", "mcp-inspector",
+      "npx", "@mcp/server-a", "---", "npx", "@mcp/server-b", "arg1",
+    ]);
+    expect(result?.targets).toEqual([
+      { command: "npx", args: ["@mcp/server-a"] },
+      { command: "npx", args: ["@mcp/server-b", "arg1"] },
+    ]);
   });
 
   it("parses --json flag", () => {
@@ -60,6 +71,18 @@ describe("parseArgs", () => {
     expect(result?.timeout).toBe(5000);
   });
 
+  it("parses --markdown flag with file path", () => {
+    const result = parseArgs(["node", "mcp-inspector", "--markdown", "report.md", "npx", "@mcp/server"]);
+    expect(result?.markdown).toBe("report.md");
+  });
+
+  it("exits on --markdown without file path", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-inspector", "--markdown", "--json", "npx", "@mcp/server"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   it("exits on invalid timeout", () => {
     expect(() => {
       parseArgs(["node", "mcp-inspector", "--timeout", "abc", "npx", "@mcp/server"]);
@@ -72,5 +95,13 @@ describe("parseArgs", () => {
       parseArgs(["node", "mcp-inspector", "--json"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("preserves server args correctly", () => {
+    const result = parseArgs(["node", "mcp-inspector", "npx", "@mcp/fs", "/tmp", "/home"]);
+    expect(result?.targets[0]).toEqual({
+      command: "npx",
+      args: ["@mcp/fs", "/tmp", "/home"],
+    });
   });
 });

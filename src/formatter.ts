@@ -79,7 +79,7 @@ export function formatOutput(result: ScanResult): string {
   return lines.join("\n");
 }
 
-export function formatJson(result: ScanResult): string {
+export function formatJson(result: ScanResult | ScanResult[]): string {
   return JSON.stringify(result, null, 2);
 }
 

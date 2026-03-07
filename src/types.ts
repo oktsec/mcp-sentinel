@@ -40,10 +40,15 @@ export interface ScanResult {
   scanDuration: number;
 }
 
-export interface CliOptions {
+export interface ServerTarget {
   command: string;
   args: string[];
+}
+
+export interface CliOptions {
+  targets: ServerTarget[];
   json: boolean;
+  markdown: string | false;
   noColor: boolean;
   timeout: number;
 }
