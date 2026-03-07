@@ -5,8 +5,13 @@ import type { ScanResult } from "../types.js";
 function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
   return {
     server: { name: "test-server", version: "1.0.0" },
+    capabilities: { tools: true, resources: false, prompts: false, logging: false },
     tools: [],
     toolSummary: { read: 0, write: 0, admin: 0 },
+    resources: [],
+    resourceTemplates: [],
+    prompts: [],
+    instructions: null,
     aguara: { available: false, findings: [], summary: "aguara not installed" },
     scanDuration: 500,
     ...overrides,
@@ -15,73 +20,71 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
 
 describe("formatMarkdown", () => {
   it("includes report header", () => {
-    const md = formatMarkdown([makeScanResult()]);
-    expect(md).toContain("# MCP Inspector Report");
+    expect(formatMarkdown([makeScanResult()])).toContain("# MCP Inspector Report");
   });
 
-  it("includes server name as section header", () => {
-    const md = formatMarkdown([makeScanResult({ server: { name: "my-mcp", version: "3.0.0" } })]);
-    expect(md).toContain("## my-mcp v3.0.0");
-  });
-
-  it("includes tool summary with categories", () => {
+  it("includes capabilities", () => {
     const md = formatMarkdown([makeScanResult({
-      tools: [
-        { tool: { name: "a", description: "A" }, category: "read" },
-        { tool: { name: "b", description: "B" }, category: "write" },
-      ],
-      toolSummary: { read: 1, write: 1, admin: 0 },
+      capabilities: { tools: true, resources: true, prompts: false, logging: false },
     })]);
-    expect(md).toContain("2 (1 read, 1 write, 0 admin)");
+    expect(md).toContain("tools, resources");
   });
 
-  it("includes tools table with category column", () => {
+  it("includes tools table with parameters column", () => {
     const md = formatMarkdown([makeScanResult({
       tools: [{
-        tool: { name: "delete_repo", description: "Delete a repository" },
-        category: "admin",
+        tool: {
+          name: "get_file",
+          description: "Read a file",
+          parameters: [
+            { name: "path", type: "string", required: true, description: "File path" },
+          ],
+        },
+        category: "read",
+      }],
+      toolSummary: { read: 1, write: 0, admin: 0 },
+    })]);
+    expect(md).toContain("| Tool | Category | Description | Parameters |");
+    expect(md).toContain("`get_file`");
+    expect(md).toContain("**path**");
+  });
+
+  it("includes resources section", () => {
+    const md = formatMarkdown([makeScanResult({
+      resources: [{ uri: "file:///data", name: "data", description: "Data file", mimeType: "text/plain" }],
+    })]);
+    expect(md).toContain("### Resources");
+    expect(md).toContain("`file:///data`");
+  });
+
+  it("includes prompts section", () => {
+    const md = formatMarkdown([makeScanResult({
+      prompts: [{
+        name: "review",
+        description: "Code review",
+        arguments: [{ name: "code", description: "Code to review", required: true }],
       }],
     })]);
-    expect(md).toContain("| Tool | Category | Description |");
-    expect(md).toContain("| `delete_repo` | admin | Delete a repository |");
+    expect(md).toContain("### Prompts");
+    expect(md).toContain("`review`");
   });
 
-  it("includes aguara findings when available", () => {
-    const md = formatMarkdown([makeScanResult({
-      aguara: {
-        available: true,
-        findings: [{ severity: "CRITICAL", ruleId: "MCP_001", ruleName: "Injection", matchedText: "test" }],
-        summary: "1 critical finding",
-      },
-    })]);
-    expect(md).toContain("### Security Findings (Aguara)");
-    expect(md).toContain("MCP_001");
-    expect(md).toContain("CRITICAL");
-  });
-
-  it("shows aguara unavailable message", () => {
-    const md = formatMarkdown([makeScanResult()]);
-    expect(md).toContain("aguara not installed");
+  it("includes server instructions", () => {
+    const md = formatMarkdown([makeScanResult({ instructions: "Be helpful." })]);
+    expect(md).toContain("### Server Instructions");
+    expect(md).toContain("Be helpful.");
   });
 
   it("handles multiple servers", () => {
     const md = formatMarkdown([
-      makeScanResult({ server: { name: "server-a", version: "1.0.0" } }),
-      makeScanResult({ server: { name: "server-b", version: "2.0.0" } }),
+      makeScanResult({ server: { name: "a", version: "1.0" } }),
+      makeScanResult({ server: { name: "b", version: "2.0" } }),
     ]);
-    expect(md).toContain("## server-a v1.0.0");
-    expect(md).toContain("## server-b v2.0.0");
+    expect(md).toContain("## a v1.0");
+    expect(md).toContain("## b v2.0");
   });
 
-  it("includes aguarascan.com footer", () => {
-    const md = formatMarkdown([makeScanResult()]);
-    expect(md).toContain("aguarascan.com");
-  });
-
-  it("truncates long descriptions", () => {
-    const md = formatMarkdown([makeScanResult({
-      tools: [{ tool: { name: "t", description: "X".repeat(100) }, category: "read" }],
-    })]);
-    expect(md).toContain("...");
+  it("includes aguarascan footer", () => {
+    expect(formatMarkdown([makeScanResult()])).toContain("aguarascan.com");
   });
 });

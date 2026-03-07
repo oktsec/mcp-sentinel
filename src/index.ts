@@ -1,6 +1,10 @@
 import { writeFile } from "node:fs/promises";
 import { parseArgs } from "./cli.js";
-import { connectToServer, getServerInfo, listTools, disconnect } from "./scanner.js";
+import {
+  connectToServer, getServerInfo, getServerCapabilities,
+  listTools, listResources, listResourceTemplates, listPrompts,
+  getInstructions, disconnect,
+} from "./scanner.js";
 import { analyzeTools, summarize } from "./analyzer.js";
 import { scanWithAguara } from "./aguara.js";
 import { formatOutput, formatJson, formatError } from "./formatter.js";
@@ -12,14 +16,27 @@ async function scanServer(target: ServerTarget, timeout: number): Promise<ScanRe
   const connection = await connectToServer(target.command, target.args, timeout);
 
   try {
-    const serverInfo = getServerInfo(connection.client);
-    const tools = await listTools(connection.client);
-    const analyzedTools = analyzeTools(tools);
-    const toolSummary = summarize(analyzedTools);
-    const aguara = await scanWithAguara(tools);
+    const server = getServerInfo(connection.client);
+    const capabilities = getServerCapabilities(connection.client);
+
+    const [rawTools, resources, resourceTemplates, prompts] = await Promise.all([
+      listTools(connection.client, capabilities.tools),
+      listResources(connection.client, capabilities.resources),
+      listResourceTemplates(connection.client, capabilities.resources),
+      listPrompts(connection.client, capabilities.prompts),
+    ]);
+
+    const instructions = getInstructions(connection.client);
+    const tools = analyzeTools(rawTools);
+    const toolSummary = summarize(tools);
+    const aguara = await scanWithAguara(rawTools);
     const scanDuration = Date.now() - startTime;
 
-    return { server: serverInfo, tools: analyzedTools, toolSummary, aguara, scanDuration };
+    return {
+      server, capabilities, tools, toolSummary,
+      resources, resourceTemplates, prompts, instructions,
+      aguara, scanDuration,
+    };
   } finally {
     await disconnect(connection);
   }
@@ -27,9 +44,7 @@ async function scanServer(target: ServerTarget, timeout: number): Promise<ScanRe
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv);
-  if (options === null) {
-    return;
-  }
+  if (options === null) return;
 
   if (options.noColor) {
     process.env["FORCE_COLOR"] = "0";
@@ -70,8 +85,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error(
-    formatError(err instanceof Error ? err.message : "Unexpected error"),
-  );
+  console.error(formatError(err instanceof Error ? err.message : "Unexpected error"));
   process.exit(1);
 });
