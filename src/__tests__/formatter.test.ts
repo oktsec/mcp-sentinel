@@ -46,7 +46,7 @@ describe("formatOutput", () => {
     expect(output).toContain("1 write");
   });
 
-  it("shows parameter count per tool", () => {
+  it("shows parameter names with required markers", () => {
     const output = formatOutput(makeScanResult({
       tools: [{
         tool: {
@@ -60,7 +60,8 @@ describe("formatOutput", () => {
         category: "write",
       }],
     }));
-    expect(output).toContain("2 params");
+    expect(output).toContain("title");
+    expect(output).toContain("body");
   });
 
   it("shows resources when present", () => {
