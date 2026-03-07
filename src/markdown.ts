@@ -17,7 +17,7 @@ export function formatMarkdown(results: ScanResult[]): string {
   const lines: string[] = [];
   const timestamp = new Date().toISOString().split("T")[0]!;
 
-  lines.push("# MCP Inspector Report");
+  lines.push("# MCP Gate Report");
   lines.push("");
   lines.push(`Generated: ${timestamp}`);
   lines.push("");

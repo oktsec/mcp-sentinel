@@ -79,7 +79,7 @@ export function formatOutput(result: ScanResult): string {
 
   // Header
   lines.push("");
-  lines.push(`\u{1F50D} ${chalk.bold("MCP Inspector")} v0.1.0`);
+  lines.push(`\u{1F50D} ${chalk.bold("MCP Gate")} v0.1.0`);
   lines.push("");
 
   // Server
@@ -165,7 +165,7 @@ export function formatDiff(diff: DiffResult): string {
   const lines: string[] = [];
 
   lines.push("");
-  lines.push(`\u{1F504} ${chalk.bold("MCP Inspector Diff")} — ${chalk.bold(diff.server)}`);
+  lines.push(`\u{1F504} ${chalk.bold("MCP Gate Diff")} — ${chalk.bold(diff.server)}`);
   lines.push("");
 
   if (diff.entries.length === 0) {

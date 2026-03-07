@@ -3,14 +3,14 @@ import type { CliOptions, ServerTarget } from "./types.js";
 const VERSION = "0.1.0";
 
 const HELP = `
-mcp-inspector v${VERSION}
+mcp-gate v${VERSION}
 Scan MCP servers to detect exposed tools, destructive operations, and security risks.
 
 USAGE
-  npx mcp-inspector <command> [args...]
-  npx mcp-inspector <url>
-  npx mcp-inspector --config
-  npx mcp-inspector <command1> [args...] --- <command2> [args...]
+  npx mcp-gate <command> [args...]
+  npx mcp-gate <url>
+  npx mcp-gate --config
+  npx mcp-gate <command1> [args...] --- <command2> [args...]
 
 TRANSPORTS
   stdio (default for commands)   Connect via stdin/stdout
@@ -31,15 +31,15 @@ OPTIONS
   --version, -v        Show version number
 
 EXAMPLES
-  npx mcp-inspector npx @modelcontextprotocol/server-github
-  npx mcp-inspector npx @modelcontextprotocol/server-filesystem /tmp
-  npx mcp-inspector http://localhost:3000/mcp
-  npx mcp-inspector http://localhost:3000/sse --transport sse
-  npx mcp-inspector node my-server.js --json
-  npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
-  npx mcp-inspector --config
-  npx mcp-inspector npx @mcp/server --json > baseline.json
-  npx mcp-inspector npx @mcp/server --diff baseline.json
+  npx mcp-gate npx @modelcontextprotocol/server-github
+  npx mcp-gate npx @modelcontextprotocol/server-filesystem /tmp
+  npx mcp-gate http://localhost:3000/mcp
+  npx mcp-gate http://localhost:3000/sse --transport sse
+  npx mcp-gate node my-server.js --json
+  npx mcp-gate npx @mcp/server-a --- npx @mcp/server-b
+  npx mcp-gate --config
+  npx mcp-gate npx @mcp/server --json > baseline.json
+  npx mcp-gate npx @mcp/server --diff baseline.json
 `.trim();
 
 function isUrl(value: string): boolean {

@@ -1,12 +1,12 @@
 {
-  "name": "mcp-inspector",
+  "name": "mcp-gate",
   "version": "0.1.0",
   "description": "Audit and enforce security policies on MCP servers — policy engine, drift detection, CI/CD gate",
   "author": "Gustavo Aragon (@oktsec)",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "mcp-inspector": "./bin/mcp-inspector.js"
+    "mcp-gate": "./bin/mcp-gate.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -44,7 +44,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/oktsec/mcp-inspector"
+    "url": "https://github.com/oktsec/mcp-gate"
   },
   "keywords": [
     "mcp",
@@ -59,8 +59,8 @@
     "llm",
     "ai-agents"
   ],
-  "homepage": "https://github.com/oktsec/mcp-inspector#readme",
+  "homepage": "https://github.com/oktsec/mcp-gate#readme",
   "bugs": {
-    "url": "https://github.com/oktsec/mcp-inspector/issues"
+    "url": "https://github.com/oktsec/mcp-gate/issues"
   }
 }

@@ -1,12 +1,12 @@
-# Contributing to MCP Inspector
+# Contributing to MCP Gate
 
 Thanks for your interest in contributing. This document covers the process and standards.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/oktsec/mcp-inspector.git
-cd mcp-inspector
+git clone https://github.com/oktsec/mcp-gate.git
+cd mcp-gate
 npm install
 npm run build
 npm test

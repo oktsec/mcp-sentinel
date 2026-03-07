@@ -1,21 +1,21 @@
 <p align="center">
-  <h1 align="center">MCP Inspector</h1>
+  <h1 align="center">MCP Gate</h1>
   <p align="center">
     <strong>Audit and enforce security policies on MCP servers before you trust them.</strong>
   </p>
   <p align="center">
-    <a href="https://www.npmjs.com/package/mcp-inspector"><img src="https://img.shields.io/npm/v/mcp-inspector.svg" alt="npm version"></a>
-    <a href="https://github.com/oktsec/mcp-inspector/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-inspector.svg" alt="license"></a>
-    <a href="https://nodejs.org"><img src="https://img.shields.io/node/v/mcp-inspector.svg" alt="node version"></a>
+    <a href="https://www.npmjs.com/package/mcp-gate"><img src="https://img.shields.io/npm/v/mcp-gate.svg" alt="npm version"></a>
+    <a href="https://github.com/oktsec/mcp-gate/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-gate.svg" alt="license"></a>
+    <a href="https://nodejs.org"><img src="https://img.shields.io/node/v/mcp-gate.svg" alt="node version"></a>
   </p>
 </p>
 
 ---
 
-MCP servers run third-party code with access to your files, credentials, and shell. MCP Inspector connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
+MCP servers run third-party code with access to your files, credentials, and shell. MCP Gate connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
 
 ```bash
-npx mcp-inspector --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-gate --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ## Real Output
@@ -23,7 +23,7 @@ npx mcp-inspector --policy .mcp-policy.yml npx @modelcontextprotocol/server-file
 Scanned against the official [MCP filesystem server](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem):
 
 ```
-🔍 MCP Inspector v0.1.0
+🔍 MCP Gate v0.1.0
 
 📦 Server: secure-filesystem-server v0.2.0
    Capabilities: tools
@@ -81,11 +81,11 @@ allow:
 
 **Exit code 2** — `write_file` was allowed by the exception, but `move_file` and the tool count violated the policy. Your CI pipeline stops here.
 
-## Why MCP Inspector
+## Why MCP Gate
 
-Every MCP client already shows you the tool list. MCP Inspector goes further:
+Every MCP client already shows you the tool list. MCP Gate goes further:
 
-| Feature | MCP Client | MCP Inspector |
+| Feature | MCP Client | MCP Gate |
 |---------|-----------|---------------|
 | See tool list | Yes | Yes |
 | **Security policy enforcement** | No | **Yes** |
@@ -140,7 +140,7 @@ Ready-to-use policies in [`examples/policies/`](examples/policies/):
 ### CI/CD Integration
 
 ```yaml
-# .github/workflows/mcp-audit.yml
+# .github/workflows/mcp-gate.yml
 name: MCP Security Audit
 on: [pull_request]
 
@@ -151,7 +151,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npx mcp-inspector --policy .mcp-policy.yml npx ./your-mcp-server
+      - run: npx mcp-gate --policy .mcp-policy.yml npx ./your-mcp-server
         # Exit code 2 = policy violations → build fails
 ```
 
@@ -161,14 +161,14 @@ See full example in [`examples/github-action.yml`](examples/github-action.yml).
 
 ```bash
 # No install needed
-npx mcp-inspector <command> [args...]
+npx mcp-gate <command> [args...]
 ```
 
 ### Quick Start
 
 ```bash
 # 1. Scan a server
-npx mcp-inspector npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-gate npx @modelcontextprotocol/server-filesystem /tmp
 
 # 2. Create a policy
 cat > .mcp-policy.yml << 'EOF'
@@ -181,30 +181,30 @@ require:
 EOF
 
 # 3. Enforce it
-npx mcp-inspector --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-gate --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ### More Examples
 
 ```bash
 # Scan remote servers via HTTP
-npx mcp-inspector http://localhost:3000/mcp
+npx mcp-gate http://localhost:3000/mcp
 
 # Scan all servers from your config (Claude Desktop, Cursor, Windsurf)
-npx mcp-inspector --config
+npx mcp-gate --config
 
 # Diff mode: detect changes between server versions
-npx mcp-inspector npx @mcp/server --json > baseline.json
-npx mcp-inspector npx @mcp/server --diff baseline.json
+npx mcp-gate npx @mcp/server --json > baseline.json
+npx mcp-gate npx @mcp/server --diff baseline.json
 
 # Scan multiple servers at once
-npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
+npx mcp-gate npx @mcp/server-a --- npx @mcp/server-b
 
 # JSON output for scripting
-npx mcp-inspector --json npx @mcp/server
+npx mcp-gate --json npx @mcp/server
 
 # Markdown report
-npx mcp-inspector --markdown report.md npx @mcp/server
+npx mcp-gate --markdown report.md npx @mcp/server
 ```
 
 ### With Aguara (recommended)
@@ -215,7 +215,7 @@ Install [Aguara](https://github.com/garagon/aguara) for deep security analysis (
 curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
 ```
 
-MCP Inspector auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
+MCP Gate auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
 
 ## Options
 
@@ -257,13 +257,13 @@ MCP Inspector auto-detects Aguara and runs its 177-rule engine against tool desc
 
 ## Ecosystem
 
-MCP Inspector is part of the [Aguara](https://github.com/garagon/aguara) security ecosystem:
+MCP Gate is part of the [Aguara](https://github.com/garagon/aguara) security ecosystem:
 
 | Tool | What it does |
 |------|-------------|
 | **[Aguara](https://github.com/garagon/aguara)** | Security scanner — 177 rules, NLP, toxic-flow analysis |
 | **[Aguara MCP](https://github.com/garagon/aguara-mcp)** | MCP server — gives AI agents security scanning as a tool |
-| **MCP Inspector** | Policy enforcement — audit, enforce, and monitor MCP servers |
+| **MCP Gate** | Policy enforcement — audit, enforce, and monitor MCP servers |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform — continuous monitoring of MCP registries |
 
 ## Roadmap

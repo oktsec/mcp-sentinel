@@ -20,7 +20,7 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
 
 describe("formatMarkdown", () => {
   it("includes report header", () => {
-    expect(formatMarkdown([makeScanResult()])).toContain("# MCP Inspector Report");
+    expect(formatMarkdown([makeScanResult()])).toContain("# MCP Gate Report");
   });
 
   it("includes capabilities", () => {

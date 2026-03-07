@@ -1,9 +1,9 @@
-# MCP Inspector Security Policy
+# MCP Gate Security Policy
 # Copy this file as .mcp-policy.yml and customize for your environment.
 #
 # Usage:
-#   npx mcp-inspector --policy .mcp-policy.yml npx @mcp/server
-#   npx mcp-inspector --policy npx @mcp/server  (auto-detects .mcp-policy.yml)
+#   npx mcp-gate --policy .mcp-policy.yml npx @mcp/server
+#   npx mcp-gate --policy npx @mcp/server  (auto-detects .mcp-policy.yml)
 
 # Deny rules — block tools that match these criteria
 deny:
