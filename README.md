@@ -62,15 +62,20 @@ MCP Inspector gives you **runtime introspection** — it connects to the live se
 ## How it works
 
 ```
-┌──────────────┐     stdio      ┌────────────────┐
-│ mcp-inspector │ ──────────── │  MCP Server     │
-│               │  connect +    │  (any server)   │
-│  1. Connect   │  list tools   └────────────────┘
-│  2. Introspect│
-│  3. Categorize│     ┌──────────────────┐
-│  4. Analyze   │ ──► │  Aguara (if       │
-│  5. Report    │     │  installed)       │
-└──────────────┘     │  177 rules, NLP,  │
+                      ┌────────────────┐
+              stdio   │  MCP Server    │
+            ┌──────── │  (local)       │
+            │         └────────────────┘
+┌───────────┤
+│ mcp-      │ HTTP/   ┌────────────────┐
+│ inspector │ SSE     │  MCP Server    │
+│           ├──────── │  (remote)      │
+│ Connect   │         └────────────────┘
+│ Introspect│
+│ Categorize│         ┌──────────────────┐
+│ Diff      │ ──────► │  Aguara (if       │
+│ Report    │         │  installed)       │
+└───────────┘         │  177 rules, NLP,  │
                       │  toxic-flow       │
                       └──────────────────┘
 ```
@@ -95,17 +100,25 @@ npx mcp-inspector npx @modelcontextprotocol/server-github
 npx mcp-inspector npx @modelcontextprotocol/server-filesystem /tmp
 npx mcp-inspector node ./my-server.js
 
+# Scan all servers from your config (Claude Desktop, Cursor, Windsurf, etc.)
+npx mcp-inspector --config
+
+# Scan remote servers via HTTP
+npx mcp-inspector http://localhost:3000/mcp
+npx mcp-inspector http://localhost:3000/sse --transport sse
+
 # Scan multiple servers at once
 npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
+
+# Diff mode: detect runtime changes
+npx mcp-inspector npx @mcp/server --json > baseline.json
+npx mcp-inspector npx @mcp/server --diff baseline.json
 
 # JSON output for CI/CD pipelines
 npx mcp-inspector --json npx @modelcontextprotocol/server-github
 
 # Export as Markdown report
 npx mcp-inspector --markdown report.md npx @modelcontextprotocol/server-github
-
-# Custom timeout
-npx mcp-inspector --timeout 10000 npx @modelcontextprotocol/server-github
 ```
 
 ### With Aguara (recommended)
@@ -136,6 +149,9 @@ This is **categorization for visibility**, not security analysis. For security, 
 |------|-------------|
 | `--json` | Structured JSON output for scripting and CI |
 | `--markdown <file>` | Export report as Markdown file |
+| `--diff <file.json>` | Compare against a previous JSON scan |
+| `--transport <type>` | Force transport: `stdio`, `sse`, `streamable-http` |
+| `--config` | Auto-detect and scan servers from config files |
 | `--no-color` | Disable colored output |
 | `--timeout <ms>` | Connection timeout in ms (default: 30000) |
 | `-h, --help` | Show help |
@@ -161,8 +177,9 @@ MCP Inspector is part of the [Aguara](https://github.com/garagon/aguara) securit
 - [x] Markdown report export
 - [x] JSON output
 - [x] GitHub Actions CI
-- [ ] HTTP/SSE transport support
-- [ ] Diff mode: compare server versions
+- [x] HTTP/SSE transport support
+- [x] Diff mode: compare server versions
+- [x] Config file auto-detection (Claude Desktop, Cursor, Windsurf, etc.)
 - [ ] Registry integration (Smithery, mcp.run)
 - [ ] VS Code extension
 

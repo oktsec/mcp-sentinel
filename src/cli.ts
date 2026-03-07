@@ -9,6 +9,7 @@ Scan MCP servers to detect exposed tools, destructive operations, and security r
 USAGE
   npx mcp-inspector <command> [args...]
   npx mcp-inspector <url>
+  npx mcp-inspector --config
   npx mcp-inspector <command1> [args...] --- <command2> [args...]
 
 TRANSPORTS
@@ -17,6 +18,7 @@ TRANSPORTS
   streamable-http (default for URLs)  Connect via Streamable HTTP
 
 OPTIONS
+  --config             Auto-detect servers from config files (Claude Desktop, Cursor, Windsurf)
   --transport <type>   Force transport type: stdio, sse, streamable-http
   --diff <file.json>   Compare current scan against a previous JSON scan
   --json               Output results as JSON
@@ -33,6 +35,7 @@ EXAMPLES
   npx mcp-inspector http://localhost:3000/sse --transport sse
   npx mcp-inspector node my-server.js --json
   npx mcp-inspector npx @mcp/server-a --- npx @mcp/server-b
+  npx mcp-inspector --config
   npx mcp-inspector npx @mcp/server --json > baseline.json
   npx mcp-inspector npx @mcp/server --diff baseline.json
 `.trim();
@@ -56,6 +59,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
 
   const json = args.includes("--json");
   const noColor = args.includes("--no-color");
+  const config = args.includes("--config");
 
   let timeout = 30_000;
   const timeoutIdx = args.indexOf("--timeout");
@@ -109,25 +113,25 @@ export function parseArgs(argv: string[]): CliOptions | null {
   const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff"]);
 
   const filteredArgs = args.filter((arg, i) => {
-    if (arg === "--json" || arg === "--no-color") return false;
+    if (arg === "--json" || arg === "--no-color" || arg === "--config") return false;
     if (FLAG_ARGS.has(arg)) return false;
     if (i > 0 && FLAG_ARGS.has(args[i - 1]!)) return false;
     return true;
   });
 
-  if (filteredArgs.length === 0) {
+  if (filteredArgs.length === 0 && !config) {
     console.error("Error: No server command provided. Run with --help for usage.");
     process.exit(1);
   }
 
-  const targets = parseTargets(filteredArgs, transportOverride);
+  const targets = filteredArgs.length > 0 ? parseTargets(filteredArgs, transportOverride) : [];
 
-  if (targets.length === 0) {
+  if (targets.length === 0 && !config) {
     console.error("Error: No server command provided. Run with --help for usage.");
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout, diff };
+  return { targets, json, markdown, noColor, timeout, diff, config };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {
