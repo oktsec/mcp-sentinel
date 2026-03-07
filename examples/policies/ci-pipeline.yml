@@ -1,0 +1,16 @@
+# CI/CD pipeline policy
+# Use with: npx mcp-inspector --policy examples/policies/ci-pipeline.yml npx @mcp/server
+# Exit code 2 on violations blocks the pipeline.
+
+deny:
+  categories:
+    - admin
+  tools:
+    - "execute_*"
+    - "shell_*"
+    - "deploy_*"
+    - "push_*"
+
+require:
+  aguara: clean
+  maxTools: 25

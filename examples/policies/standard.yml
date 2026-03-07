@@ -1,0 +1,19 @@
+# Standard policy — development environments
+# Blocks admin tools but allows writes. Requires clean aguara scan.
+
+deny:
+  categories:
+    - admin
+  tools:
+    - "execute_*"
+    - "shell_*"
+    - "run_command"
+
+require:
+  aguara: clean
+  maxTools: 30
+
+allow:
+  tools:
+    - "execute_query"
+    - "run_tests"
