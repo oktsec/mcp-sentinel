@@ -6,8 +6,8 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
   return {
     server: { name: "test-server", version: "1.0.0" },
     tools: [],
-    risk: { level: "LOW", reasons: [{ message: "No risky patterns detected" }] },
-    envVars: [],
+    toolSummary: { read: 0, write: 0, admin: 0 },
+    aguara: { available: false, findings: [], summary: "aguara not installed" },
     scanDuration: 500,
     ...overrides,
   };
@@ -24,28 +24,44 @@ describe("formatOutput", () => {
   it("includes tool count", () => {
     const result = makeScanResult({
       tools: [
-        { tool: { name: "get_data", description: "Get data" }, flags: [], safe: true },
-        { tool: { name: "list_items", description: "List items" }, flags: [], safe: true },
+        { tool: { name: "a", description: "A" }, category: "read" },
+        { tool: { name: "b", description: "B" }, category: "write" },
       ],
+      toolSummary: { read: 1, write: 1, admin: 0 },
     });
     const output = formatOutput(result);
     expect(output).toContain("2");
   });
 
-  it("includes risk level", () => {
+  it("includes tool summary breakdown", () => {
     const result = makeScanResult({
-      risk: { level: "HIGH", reasons: [{ message: "Code execution detected" }] },
+      toolSummary: { read: 5, write: 3, admin: 1 },
     });
     const output = formatOutput(result);
-    expect(output).toContain("HIGH");
+    expect(output).toContain("5 read");
+    expect(output).toContain("3 write");
+    expect(output).toContain("1 admin");
   });
 
-  it("includes risk reasons", () => {
+  it("shows aguara install prompt when not available", () => {
+    const result = makeScanResult();
+    const output = formatOutput(result);
+    expect(output).toContain("aguara");
+    expect(output).toContain("github.com/garagon/aguara");
+  });
+
+  it("shows aguara findings when available", () => {
     const result = makeScanResult({
-      risk: { level: "MEDIUM", reasons: [{ message: "2 destructive operations detected" }] },
+      aguara: {
+        available: true,
+        findings: [{ severity: "HIGH", ruleId: "MCP_001", ruleName: "Tool description injection", matchedText: "test" }],
+        summary: "Found 1 issue: 1 high",
+      },
     });
     const output = formatOutput(result);
-    expect(output).toContain("2 destructive operations detected");
+    expect(output).toContain("MCP_001");
+    expect(output).toContain("HIGH");
+    expect(output).toContain("Aguara Security Analysis");
   });
 
   it("includes scan duration", () => {
@@ -55,65 +71,51 @@ describe("formatOutput", () => {
   });
 
   it("includes aguarascan.com link", () => {
-    const result = makeScanResult();
-    const output = formatOutput(result);
+    const output = formatOutput(makeScanResult());
     expect(output).toContain("aguarascan.com");
   });
 
-  it("truncates long descriptions", () => {
-    const longDesc = "A".repeat(100);
+  it("shows category tags on tools", () => {
     const result = makeScanResult({
-      tools: [{ tool: { name: "tool", description: longDesc }, flags: [], safe: true }],
+      tools: [
+        { tool: { name: "delete_it", description: "Delete" }, category: "admin" },
+        { tool: { name: "write_it", description: "Write" }, category: "write" },
+      ],
+    });
+    const output = formatOutput(result);
+    expect(output).toContain("ADMIN");
+    expect(output).toContain("WRITE");
+  });
+
+  it("truncates long descriptions", () => {
+    const result = makeScanResult({
+      tools: [{ tool: { name: "t", description: "A".repeat(100) }, category: "read" }],
     });
     const output = formatOutput(result);
     expect(output).toContain("...");
-  });
-
-  it("shows flag labels for flagged tools", () => {
-    const result = makeScanResult({
-      tools: [{
-        tool: { name: "delete_all", description: "Delete everything" },
-        flags: [{ type: "destructive", label: "DESTRUCTIVE", reason: "test" }],
-        safe: false,
-      }],
-    });
-    const output = formatOutput(result);
-    expect(output).toContain("DESTRUCTIVE");
   });
 });
 
 describe("formatJson", () => {
   it("returns valid JSON for single result", () => {
-    const result = makeScanResult();
-    const json = formatJson(result);
+    const json = formatJson(makeScanResult());
     expect(() => JSON.parse(json)).not.toThrow();
   });
 
   it("returns valid JSON for array of results", () => {
-    const results = [makeScanResult(), makeScanResult()];
-    const json = formatJson(results);
+    const json = formatJson([makeScanResult(), makeScanResult()]);
     const parsed = JSON.parse(json) as unknown[];
     expect(Array.isArray(parsed)).toBe(true);
     expect(parsed).toHaveLength(2);
-  });
-
-  it("preserves all fields", () => {
-    const result = makeScanResult({ envVars: ["API_KEY"] });
-    const json = formatJson(result);
-    const parsed = JSON.parse(json) as ScanResult;
-    expect(parsed.envVars).toContain("API_KEY");
-    expect(parsed.server.name).toBe("test-server");
   });
 });
 
 describe("formatError", () => {
   it("includes the error message", () => {
-    const output = formatError("Connection failed");
-    expect(output).toContain("Connection failed");
+    expect(formatError("Connection failed")).toContain("Connection failed");
   });
 
   it("includes Error label", () => {
-    const output = formatError("timeout");
-    expect(output).toContain("Error:");
+    expect(formatError("timeout")).toContain("Error:");
   });
 });

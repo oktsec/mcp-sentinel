@@ -1,7 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { parseArgs } from "./cli.js";
 import { connectToServer, getServerInfo, listTools, disconnect } from "./scanner.js";
-import { analyzeTools, detectEnvVars, assessRisk } from "./analyzer.js";
+import { analyzeTools, summarize } from "./analyzer.js";
+import { scanWithAguara } from "./aguara.js";
 import { formatOutput, formatJson, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
 import type { ScanResult, ServerTarget } from "./types.js";
@@ -14,11 +15,11 @@ async function scanServer(target: ServerTarget, timeout: number): Promise<ScanRe
     const serverInfo = getServerInfo(connection.client);
     const tools = await listTools(connection.client);
     const analyzedTools = analyzeTools(tools);
-    const envVars = detectEnvVars(tools);
-    const risk = assessRisk(analyzedTools, envVars);
+    const toolSummary = summarize(analyzedTools);
+    const aguara = await scanWithAguara(tools);
     const scanDuration = Date.now() - startTime;
 
-    return { server: serverInfo, tools: analyzedTools, risk, envVars, scanDuration };
+    return { server: serverInfo, tools: analyzedTools, toolSummary, aguara, scanDuration };
   } finally {
     await disconnect(connection);
   }

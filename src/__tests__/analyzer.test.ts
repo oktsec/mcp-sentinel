@@ -1,239 +1,80 @@
 import { describe, it, expect } from "vitest";
-import { analyzeTools, analyzeSchema, detectEnvVars, assessRisk } from "../analyzer.js";
+import { analyzeTools, categorizeTool, summarize } from "../analyzer.js";
 import type { ToolInfo } from "../types.js";
 
+describe("categorizeTool", () => {
+  it("categorizes read-only tools", () => {
+    expect(categorizeTool({ name: "get_file", description: "Read a file" })).toBe("read");
+    expect(categorizeTool({ name: "list_items", description: "List all items" })).toBe("read");
+    expect(categorizeTool({ name: "search", description: "Search for data" })).toBe("read");
+  });
+
+  it("categorizes write tools", () => {
+    expect(categorizeTool({ name: "write_file", description: "Write to a file" })).toBe("write");
+    expect(categorizeTool({ name: "create_issue", description: "Create a new issue" })).toBe("write");
+    expect(categorizeTool({ name: "push_files", description: "Push files to repo" })).toBe("write");
+    expect(categorizeTool({ name: "upload_asset", description: "Upload an asset" })).toBe("write");
+  });
+
+  it("categorizes admin tools", () => {
+    expect(categorizeTool({ name: "delete_repository", description: "Delete a repository" })).toBe("admin");
+    expect(categorizeTool({ name: "run_command", description: "Execute a shell command" })).toBe("admin");
+    expect(categorizeTool({ name: "drop_table", description: "Drop a database table" })).toBe("admin");
+    expect(categorizeTool({ name: "purge_cache", description: "Purge the cache" })).toBe("admin");
+  });
+
+  it("admin takes priority over write", () => {
+    expect(categorizeTool({ name: "delete_and_create", description: "Delete then create" })).toBe("admin");
+  });
+
+  it("matches on description too", () => {
+    expect(categorizeTool({ name: "do_thing", description: "Execute a task" })).toBe("admin");
+    expect(categorizeTool({ name: "do_thing", description: "Create a new item" })).toBe("write");
+  });
+});
+
 describe("analyzeTools", () => {
-  it("flags destructive operations", () => {
+  it("returns analyzed tools with categories", () => {
     const tools: ToolInfo[] = [
-      { name: "delete_repository", description: "Delete a repository" },
+      { name: "get_data", description: "Read data" },
+      { name: "write_file", description: "Write a file" },
+      { name: "delete_item", description: "Delete an item" },
     ];
     const result = analyzeTools(tools);
-    expect(result[0]!.flags).toContainEqual(
-      expect.objectContaining({ type: "destructive" }),
-    );
-    expect(result[0]!.safe).toBe(false);
+    expect(result).toHaveLength(3);
+    expect(result[0]!.category).toBe("read");
+    expect(result[1]!.category).toBe("write");
+    expect(result[2]!.category).toBe("admin");
   });
 
-  it("flags execution capabilities", () => {
-    const tools: ToolInfo[] = [
-      { name: "run_command", description: "Execute a shell command" },
-    ];
-    const result = analyzeTools(tools);
-    const types = result[0]!.flags.map((f) => f.type);
-    expect(types).toContain("execute");
-  });
-
-  it("flags write access", () => {
-    const tools: ToolInfo[] = [
-      { name: "push_files", description: "Write files to a repository" },
-    ];
-    const result = analyzeTools(tools);
-    const types = result[0]!.flags.map((f) => f.type);
-    expect(types).toContain("write");
-  });
-
-  it("flags network access", () => {
-    const tools: ToolInfo[] = [
-      { name: "fetch_url", description: "Fetch content from a URL via HTTP" },
-    ];
-    const result = analyzeTools(tools);
-    const types = result[0]!.flags.map((f) => f.type);
-    expect(types).toContain("network");
-  });
-
-  it("marks safe tools correctly", () => {
-    const tools: ToolInfo[] = [
-      { name: "get_file_contents", description: "Read files from a repository" },
-    ];
-    const result = analyzeTools(tools);
-    expect(result[0]!.safe).toBe(true);
-    expect(result[0]!.flags).toHaveLength(0);
-  });
-
-  it("handles multiple flags on a single tool", () => {
-    const tools: ToolInfo[] = [
-      { name: "execute_and_delete", description: "Run shell command to remove files" },
-    ];
-    const result = analyzeTools(tools);
-    const types = result[0]!.flags.map((f) => f.type);
-    expect(types).toContain("destructive");
-    expect(types).toContain("execute");
+  it("handles empty tool list", () => {
+    expect(analyzeTools([])).toEqual([]);
   });
 });
 
-describe("analyzeSchema", () => {
-  it("flags command parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { command: { type: "string" } },
-    });
-    expect(flags).toContainEqual(
-      expect.objectContaining({ type: "schema", reason: expect.stringContaining("command") }),
-    );
-  });
-
-  it("flags code/query parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { sql: { type: "string" }, code: { type: "string" } },
-    });
-    expect(flags).toHaveLength(2);
-    expect(flags[0]!.reason).toContain("sql");
-    expect(flags[1]!.reason).toContain("code");
-  });
-
-  it("flags URL parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { url: { type: "string" }, callback_url: { type: "string" } },
-    });
-    expect(flags).toHaveLength(2);
-  });
-
-  it("flags filesystem path parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { file_path: { type: "string" }, dest: { type: "string" } },
-    });
-    expect(flags).toHaveLength(2);
-  });
-
-  it("does not flag generic path parameter", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { path: { type: "string" } },
-    });
-    expect(flags).toHaveLength(0);
-  });
-
-  it("flags credential parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { password: { type: "string" }, api_key: { type: "string" } },
-    });
-    expect(flags).toHaveLength(2);
-  });
-
-  it("returns empty for safe parameters", () => {
-    const flags = analyzeSchema({
-      type: "object",
-      properties: { name: { type: "string" }, count: { type: "number" } },
-    });
-    expect(flags).toHaveLength(0);
-  });
-
-  it("returns empty for undefined schema", () => {
-    const flags = analyzeSchema(undefined);
-    expect(flags).toHaveLength(0);
-  });
-
-  it("returns empty for schema without properties", () => {
-    const flags = analyzeSchema({ type: "object" });
-    expect(flags).toHaveLength(0);
-  });
-
-  it("integrates with analyzeTools", () => {
-    const tools: ToolInfo[] = [{
-      name: "safe_tool",
-      description: "A safe looking tool",
-      inputSchema: {
-        type: "object",
-        properties: { command: { type: "string" }, shell_command: { type: "string" } },
-      },
-    }];
-    const result = analyzeTools(tools);
-    expect(result[0]!.safe).toBe(false);
-    const schemaFlags = result[0]!.flags.filter((f) => f.type === "schema");
-    expect(schemaFlags.length).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe("detectEnvVars", () => {
-  it("detects environment variable patterns", () => {
+describe("summarize", () => {
+  it("counts categories correctly", () => {
     const tools: ToolInfo[] = [
-      { name: "github_api", description: "Requires GITHUB_TOKEN to authenticate" },
-    ];
-    const result = detectEnvVars(tools);
-    expect(result).toContain("GITHUB_TOKEN");
-  });
-
-  it("filters out common false positives", () => {
-    const tools: ToolInfo[] = [
-      { name: "get_data", description: "Returns JSON via HTTP GET request" },
-    ];
-    const result = detectEnvVars(tools);
-    expect(result).not.toContain("JSON");
-    expect(result).not.toContain("HTTP");
-    expect(result).not.toContain("GET");
-  });
-
-  it("requires underscore to reduce false positives", () => {
-    const tools: ToolInfo[] = [
-      { name: "search", description: "Uses CUSTOM token for search" },
-    ];
-    const result = detectEnvVars(tools);
-    expect(result).not.toContain("CUSTOM");
-  });
-});
-
-describe("assessRisk", () => {
-  it("returns HIGH for code execution", () => {
-    const tools: ToolInfo[] = [
-      { name: "run_shell", description: "Execute a bash command" },
+      { name: "get_a", description: "Read" },
+      { name: "get_b", description: "Read" },
+      { name: "write_c", description: "Write something" },
+      { name: "delete_d", description: "Delete something" },
     ];
     const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, []);
-    expect(risk.level).toBe("HIGH");
+    const summary = summarize(analyzed);
+    expect(summary).toEqual({ read: 2, write: 1, admin: 1 });
   });
 
-  it("returns MEDIUM for destructive operations", () => {
+  it("handles all read tools", () => {
     const tools: ToolInfo[] = [
-      { name: "delete_file", description: "Delete a file from disk" },
+      { name: "list_a", description: "List" },
+      { name: "get_b", description: "Get" },
     ];
-    const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, []);
-    expect(risk.level).toBe("MEDIUM");
+    const summary = summarize(analyzeTools(tools));
+    expect(summary).toEqual({ read: 2, write: 0, admin: 0 });
   });
 
-  it("returns HIGH for 3+ destructive operations", () => {
-    const tools: ToolInfo[] = [
-      { name: "delete_file", description: "Delete a file" },
-      { name: "remove_user", description: "Remove a user account" },
-      { name: "drop_table", description: "Drop a database table" },
-    ];
-    const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, []);
-    expect(risk.level).toBe("HIGH");
-  });
-
-  it("returns LOW for safe tools only", () => {
-    const tools: ToolInfo[] = [
-      { name: "get_status", description: "Get current status" },
-      { name: "list_items", description: "List all items" },
-    ];
-    const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, []);
-    expect(risk.level).toBe("LOW");
-  });
-
-  it("returns MEDIUM for 3+ tools with dangerous params", () => {
-    const tools: ToolInfo[] = [
-      { name: "a", description: "Tool a", inputSchema: { type: "object", properties: { command: { type: "string" } } } },
-      { name: "b", description: "Tool b", inputSchema: { type: "object", properties: { sql: { type: "string" } } } },
-      { name: "c", description: "Tool c", inputSchema: { type: "object", properties: { url: { type: "string" } } } },
-    ];
-    const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, []);
-    expect(risk.level).toBe("MEDIUM");
-    expect(risk.reasons.some((r) => r.message.includes("dangerous input parameters"))).toBe(true);
-  });
-
-  it("includes env var reasons when present", () => {
-    const tools: ToolInfo[] = [
-      { name: "get_data", description: "Get data" },
-    ];
-    const analyzed = analyzeTools(tools);
-    const risk = assessRisk(analyzed, ["API_KEY"]);
-    expect(risk.reasons.some((r) => r.message.includes("API_KEY"))).toBe(true);
+  it("handles empty list", () => {
+    expect(summarize([])).toEqual({ read: 0, write: 0, admin: 0 });
   });
 });
