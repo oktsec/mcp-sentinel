@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in MCP Gate, please report it responsibly.
+If you discover a security vulnerability in MCP Sentinel, please report it responsibly.
 
 **Do not open a public issue.**
 
@@ -23,7 +23,7 @@ We will acknowledge your report within 48 hours and aim to provide a fix within 
 
 ## Scope
 
-MCP Gate is a read-only scanning tool. It connects to MCP servers, queries their tool list, and analyzes the results. It does **not**:
+MCP Sentinel is a read-only scanning tool. It connects to MCP servers, queries their tool list, and analyzes the results. It does **not**:
 
 - Execute any tools on the target server
 - Send data to external services

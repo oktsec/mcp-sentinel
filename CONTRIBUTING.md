@@ -1,12 +1,12 @@
-# Contributing to MCP Gate
+# Contributing to MCP Sentinel
 
 Thanks for your interest in contributing. This document covers the process and standards.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/oktsec/mcp-gate.git
-cd mcp-gate
+git clone https://github.com/oktsec/mcp-sentinel.git
+cd mcp-sentinel
 npm install
 npm run build
 npm test

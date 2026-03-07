@@ -42,7 +42,7 @@ export async function connectToServer(
   const transport = createTransport(target);
 
   const client = new Client({
-    name: "mcp-gate",
+    name: "mcp-sentinel",
     version: "0.1.0",
   });
 

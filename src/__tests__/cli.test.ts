@@ -18,24 +18,24 @@ describe("parseArgs", () => {
   });
 
   it("returns null and shows help when no args", () => {
-    const result = parseArgs(["node", "mcp-gate"]);
+    const result = parseArgs(["node", "mcp-sentinel"]);
     expect(result).toBeNull();
     expect(consoleSpy).toHaveBeenCalled();
   });
 
   it("returns null for --help flag", () => {
-    const result = parseArgs(["node", "mcp-gate", "--help"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--help"]);
     expect(result).toBeNull();
   });
 
   it("returns null for --version flag", () => {
-    const result = parseArgs(["node", "mcp-gate", "--version"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--version"]);
     expect(result).toBeNull();
     expect(consoleSpy).toHaveBeenCalledWith("0.1.0");
   });
 
   it("parses a single stdio server target", () => {
-    const result = parseArgs(["node", "mcp-gate", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "npx", "@mcp/server"]);
     expect(result).toEqual({
       targets: [{ type: "stdio", command: "npx", args: ["@mcp/server"] }],
       json: false,
@@ -51,7 +51,7 @@ describe("parseArgs", () => {
 
   it("parses multiple server targets separated by ---", () => {
     const result = parseArgs([
-      "node", "mcp-gate",
+      "node", "mcp-sentinel",
       "npx", "@mcp/server-a", "---", "npx", "@mcp/server-b", "arg1",
     ]);
     expect(result?.targets).toEqual([
@@ -61,48 +61,48 @@ describe("parseArgs", () => {
   });
 
   it("parses --json flag", () => {
-    const result = parseArgs(["node", "mcp-gate", "--json", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--json", "npx", "@mcp/server"]);
     expect(result?.json).toBe(true);
   });
 
   it("parses --no-color flag", () => {
-    const result = parseArgs(["node", "mcp-gate", "--no-color", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--no-color", "npx", "@mcp/server"]);
     expect(result?.noColor).toBe(true);
   });
 
   it("parses --timeout flag", () => {
-    const result = parseArgs(["node", "mcp-gate", "--timeout", "5000", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--timeout", "5000", "npx", "@mcp/server"]);
     expect(result?.timeout).toBe(5000);
   });
 
   it("parses --markdown flag with file path", () => {
-    const result = parseArgs(["node", "mcp-gate", "--markdown", "report.md", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--markdown", "report.md", "npx", "@mcp/server"]);
     expect(result?.markdown).toBe("report.md");
   });
 
   it("exits on --markdown without file path", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--markdown", "--json", "npx", "@mcp/server"]);
+      parseArgs(["node", "mcp-sentinel", "--markdown", "--json", "npx", "@mcp/server"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("exits on invalid timeout", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--timeout", "abc", "npx", "@mcp/server"]);
+      parseArgs(["node", "mcp-sentinel", "--timeout", "abc", "npx", "@mcp/server"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("exits when only flags provided without command", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--json"]);
+      parseArgs(["node", "mcp-sentinel", "--json"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("preserves server args correctly", () => {
-    const result = parseArgs(["node", "mcp-gate", "npx", "@mcp/fs", "/tmp", "/home"]);
+    const result = parseArgs(["node", "mcp-sentinel", "npx", "@mcp/fs", "/tmp", "/home"]);
     expect(result?.targets[0]).toEqual({
       type: "stdio",
       command: "npx",
@@ -112,7 +112,7 @@ describe("parseArgs", () => {
 
   // URL-based targets
   it("parses an HTTP URL as streamable-http target", () => {
-    const result = parseArgs(["node", "mcp-gate", "http://localhost:3000/mcp"]);
+    const result = parseArgs(["node", "mcp-sentinel", "http://localhost:3000/mcp"]);
     expect(result?.targets[0]).toEqual({
       type: "streamable-http",
       url: "http://localhost:3000/mcp",
@@ -120,7 +120,7 @@ describe("parseArgs", () => {
   });
 
   it("parses an HTTPS URL as streamable-http target", () => {
-    const result = parseArgs(["node", "mcp-gate", "https://example.com/mcp"]);
+    const result = parseArgs(["node", "mcp-sentinel", "https://example.com/mcp"]);
     expect(result?.targets[0]).toEqual({
       type: "streamable-http",
       url: "https://example.com/mcp",
@@ -128,7 +128,7 @@ describe("parseArgs", () => {
   });
 
   it("uses sse transport when --transport sse with URL", () => {
-    const result = parseArgs(["node", "mcp-gate", "--transport", "sse", "http://localhost:3000/sse"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--transport", "sse", "http://localhost:3000/sse"]);
     expect(result?.targets[0]).toEqual({
       type: "sse",
       url: "http://localhost:3000/sse",
@@ -137,35 +137,35 @@ describe("parseArgs", () => {
 
   it("exits on --transport with invalid value", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--transport", "invalid", "http://localhost:3000/mcp"]);
+      parseArgs(["node", "mcp-sentinel", "--transport", "invalid", "http://localhost:3000/mcp"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("exits on --transport stdio with URL target", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--transport", "stdio", "http://localhost:3000/mcp"]);
+      parseArgs(["node", "mcp-sentinel", "--transport", "stdio", "http://localhost:3000/mcp"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("exits on --transport sse with command target", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "--transport", "sse", "npx", "@mcp/server"]);
+      parseArgs(["node", "mcp-sentinel", "--transport", "sse", "npx", "@mcp/server"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("exits when URL target has extra args", () => {
     expect(() => {
-      parseArgs(["node", "mcp-gate", "http://localhost:3000/mcp", "extra"]);
+      parseArgs(["node", "mcp-sentinel", "http://localhost:3000/mcp", "extra"]);
     }).toThrow("process.exit called");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("mixes stdio and URL targets with ---", () => {
     const result = parseArgs([
-      "node", "mcp-gate",
+      "node", "mcp-sentinel",
       "npx", "@mcp/server-a", "---", "http://localhost:3000/mcp",
     ]);
     expect(result?.targets).toEqual([
@@ -176,13 +176,13 @@ describe("parseArgs", () => {
 
   // --config
   it("parses --config flag with no targets", () => {
-    const result = parseArgs(["node", "mcp-gate", "--config"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--config"]);
     expect(result?.config).toBe(true);
     expect(result?.targets).toEqual([]);
   });
 
   it("parses --config flag with additional targets", () => {
-    const result = parseArgs(["node", "mcp-gate", "--config", "npx", "@mcp/server"]);
+    const result = parseArgs(["node", "mcp-sentinel", "--config", "npx", "@mcp/server"]);
     expect(result?.config).toBe(true);
     expect(result?.targets).toEqual([{ type: "stdio", command: "npx", args: ["@mcp/server"] }]);
   });

@@ -1,9 +1,9 @@
-# MCP Gate Security Policy
+# MCP Sentinel Security Policy
 # Copy this file as .mcp-policy.yml and customize for your environment.
 #
 # Usage:
-#   npx mcp-gate --policy .mcp-policy.yml npx @mcp/server
-#   npx mcp-gate --policy npx @mcp/server  (auto-detects .mcp-policy.yml)
+#   npx mcp-sentinel --policy .mcp-policy.yml npx @mcp/server
+#   npx mcp-sentinel --policy npx @mcp/server  (auto-detects .mcp-policy.yml)
 
 # Deny rules — block tools that match these criteria
 deny:

@@ -1,12 +1,12 @@
 {
-  "name": "mcp-gate",
+  "name": "mcp-sentinel",
   "version": "0.1.0",
   "description": "Audit and enforce security policies on MCP servers — policy engine, drift detection, CI/CD gate",
   "author": "Gustavo Aragon (@oktsec)",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "mcp-gate": "./bin/mcp-gate.js"
+    "mcp-sentinel": "bin/mcp-sentinel.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -44,7 +44,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/oktsec/mcp-gate"
+    "url": "git+https://github.com/oktsec/mcp-sentinel.git"
   },
   "keywords": [
     "mcp",
@@ -59,8 +59,8 @@
     "llm",
     "ai-agents"
   ],
-  "homepage": "https://github.com/oktsec/mcp-gate#readme",
+  "homepage": "https://github.com/oktsec/mcp-sentinel#readme",
   "bugs": {
-    "url": "https://github.com/oktsec/mcp-gate/issues"
+    "url": "https://github.com/oktsec/mcp-sentinel/issues"
   }
 }

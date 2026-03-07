@@ -82,7 +82,7 @@ export async function scanWithAguara(tools: ToolInfo[]): Promise<AguaraResult> {
   }
 
   const content = buildScanContent(tools);
-  const tmpDir = await mkdtemp(join(tmpdir(), "mcp-gate-"));
+  const tmpDir = await mkdtemp(join(tmpdir(), "mcp-sentinel-"));
   const tmpFile = join(tmpDir, "tools.md");
 
   try {

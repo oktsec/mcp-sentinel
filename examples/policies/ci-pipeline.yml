@@ -1,5 +1,5 @@
 # CI/CD pipeline policy
-# Use with: npx mcp-gate --policy examples/policies/ci-pipeline.yml npx @mcp/server
+# Use with: npx mcp-sentinel --policy examples/policies/ci-pipeline.yml npx @mcp/server
 # Exit code 2 on violations blocks the pipeline.
 
 deny:

@@ -1,21 +1,21 @@
 <p align="center">
-  <h1 align="center">MCP Gate</h1>
+  <h1 align="center">MCP Sentinel</h1>
   <p align="center">
     <strong>Audit and enforce security policies on MCP servers before you trust them.</strong>
   </p>
   <p align="center">
-    <a href="https://www.npmjs.com/package/mcp-gate"><img src="https://img.shields.io/npm/v/mcp-gate.svg" alt="npm version"></a>
-    <a href="https://github.com/oktsec/mcp-gate/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-gate.svg" alt="license"></a>
-    <a href="https://nodejs.org"><img src="https://img.shields.io/node/v/mcp-gate.svg" alt="node version"></a>
+    <a href="https://www.npmjs.com/package/mcp-sentinel"><img src="https://img.shields.io/npm/v/mcp-sentinel.svg" alt="npm version"></a>
+    <a href="https://github.com/oktsec/mcp-sentinel/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-sentinel.svg" alt="license"></a>
+    <a href="https://nodejs.org"><img src="https://img.shields.io/node/v/mcp-sentinel.svg" alt="node version"></a>
   </p>
 </p>
 
 ---
 
-MCP servers run third-party code with access to your files, credentials, and shell. MCP Gate connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
+MCP servers run third-party code with access to your files, credentials, and shell. MCP Sentinel connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
 
 ```bash
-npx mcp-gate --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-sentinel --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ## Real Output
@@ -23,7 +23,7 @@ npx mcp-gate --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesyste
 Scanned against the official [MCP filesystem server](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem):
 
 ```
-🔍 MCP Gate v0.1.0
+🔍 MCP Sentinel v0.1.0
 
 📦 Server: secure-filesystem-server v0.2.0
    Capabilities: tools
@@ -81,11 +81,11 @@ allow:
 
 **Exit code 2** — `write_file` was allowed by the exception, but `move_file` and the tool count violated the policy. Your CI pipeline stops here.
 
-## Why MCP Gate
+## Why MCP Sentinel
 
-Every MCP client already shows you the tool list. MCP Gate goes further:
+Every MCP client already shows you the tool list. MCP Sentinel goes further:
 
-| Feature | MCP Client | MCP Gate |
+| Feature | MCP Client | MCP Sentinel |
 |---------|-----------|---------------|
 | See tool list | Yes | Yes |
 | **Security policy enforcement** | No | **Yes** |
@@ -140,7 +140,7 @@ Ready-to-use policies in [`examples/policies/`](examples/policies/):
 ### CI/CD Integration
 
 ```yaml
-# .github/workflows/mcp-gate.yml
+# .github/workflows/mcp-sentinel.yml
 name: MCP Security Audit
 on: [pull_request]
 
@@ -151,7 +151,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npx mcp-gate --policy .mcp-policy.yml npx ./your-mcp-server
+      - run: npx mcp-sentinel --policy .mcp-policy.yml npx ./your-mcp-server
         # Exit code 2 = policy violations → build fails
 ```
 
@@ -161,14 +161,14 @@ See full example in [`examples/github-action.yml`](examples/github-action.yml).
 
 ```bash
 # No install needed
-npx mcp-gate <command> [args...]
+npx mcp-sentinel <command> [args...]
 ```
 
 ### Quick Start
 
 ```bash
 # 1. Scan a server
-npx mcp-gate npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp
 
 # 2. Create a policy
 cat > .mcp-policy.yml << 'EOF'
@@ -181,30 +181,30 @@ require:
 EOF
 
 # 3. Enforce it
-npx mcp-gate --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-sentinel --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ### More Examples
 
 ```bash
 # Scan remote servers via HTTP
-npx mcp-gate http://localhost:3000/mcp
+npx mcp-sentinel http://localhost:3000/mcp
 
 # Scan all servers from your config (Claude Desktop, Cursor, Windsurf)
-npx mcp-gate --config
+npx mcp-sentinel --config
 
 # Diff mode: detect changes between server versions
-npx mcp-gate npx @mcp/server --json > baseline.json
-npx mcp-gate npx @mcp/server --diff baseline.json
+npx mcp-sentinel npx @mcp/server --json > baseline.json
+npx mcp-sentinel npx @mcp/server --diff baseline.json
 
 # Scan multiple servers at once
-npx mcp-gate npx @mcp/server-a --- npx @mcp/server-b
+npx mcp-sentinel npx @mcp/server-a --- npx @mcp/server-b
 
 # JSON output for scripting
-npx mcp-gate --json npx @mcp/server
+npx mcp-sentinel --json npx @mcp/server
 
 # Markdown report
-npx mcp-gate --markdown report.md npx @mcp/server
+npx mcp-sentinel --markdown report.md npx @mcp/server
 ```
 
 ### With Aguara (recommended)
@@ -215,7 +215,7 @@ Install [Aguara](https://github.com/garagon/aguara) for deep security analysis (
 curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
 ```
 
-MCP Gate auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
+MCP Sentinel auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
 
 ## Options
 
@@ -257,13 +257,13 @@ MCP Gate auto-detects Aguara and runs its 177-rule engine against tool descripti
 
 ## Ecosystem
 
-MCP Gate is part of the [Aguara](https://github.com/garagon/aguara) security ecosystem:
+MCP Sentinel is part of the [Aguara](https://github.com/garagon/aguara) security ecosystem:
 
 | Tool | What it does |
 |------|-------------|
 | **[Aguara](https://github.com/garagon/aguara)** | Security scanner — 177 rules, NLP, toxic-flow analysis |
 | **[Aguara MCP](https://github.com/garagon/aguara-mcp)** | MCP server — gives AI agents security scanning as a tool |
-| **MCP Gate** | Policy enforcement — audit, enforce, and monitor MCP servers |
+| **MCP Sentinel** | Policy enforcement — audit, enforce, and monitor MCP servers |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform — continuous monitoring of MCP registries |
 
 ## Roadmap

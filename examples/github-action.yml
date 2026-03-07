@@ -1,5 +1,5 @@
 # Example: MCP server security gate in GitHub Actions
-# Add this to .github/workflows/mcp-gate.yml
+# Add this to .github/workflows/mcp-sentinel.yml
 #
 # This workflow scans your MCP server on every PR and blocks merging
 # if the server violates your security policy.
@@ -12,7 +12,7 @@ on:
     branches: [main]
 
 jobs:
-  mcp-gate:
+  mcp-sentinel:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,5 +25,5 @@ jobs:
       # - run: curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
 
       - name: Scan MCP server
-        run: npx mcp-gate --policy .mcp-policy.yml npx ./your-mcp-server
+        run: npx mcp-sentinel --policy .mcp-policy.yml npx ./your-mcp-server
         # Exit code 2 = policy violations found → build fails
