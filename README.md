@@ -210,7 +210,7 @@ MCP Sentinel is part of the [Aguara](https://github.com/garagon/aguara) security
 | Tool | What it does |
 |------|-------------|
 | **[Aguara](https://github.com/garagon/aguara)** | Security scanner — 177 rules, NLP, toxic-flow analysis |
-| **[Aguara MCP](https://github.com/garagon/aguara-mcp)** | MCP server — gives AI agents security scanning as a tool |
+| **[MCP Aguara](https://github.com/garagon/mcp-aguara)** | MCP server — gives AI agents security scanning as a tool |
 | **MCP Sentinel** | Policy enforcement — audit, enforce, and monitor MCP servers |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform — continuous monitoring of MCP registries |
 
