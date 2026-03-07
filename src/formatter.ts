@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import type {
-  ScanResult, AnalyzedTool, AguaraFinding, DiffResult,
+  ScanResult, AnalyzedTool, AguaraFinding, DiffResult, PolicyResult,
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities,
 } from "./types.js";
 
@@ -188,6 +188,22 @@ export function formatDiff(diff: DiffResult): string {
   lines.push("");
   lines.push(chalk.dim(`${diff.entries.length} change(s) detected`));
   lines.push("");
+  return lines.join("\n");
+}
+
+export function formatPolicyResult(result: PolicyResult, serverName: string): string {
+  const lines: string[] = [];
+
+  if (result.passed) {
+    lines.push(`  ${chalk.green("\u2705")} ${chalk.bold(serverName)}: policy passed`);
+    return lines.join("\n");
+  }
+
+  lines.push(`  ${chalk.red("\u274C")} ${chalk.bold(serverName)}: policy FAILED (${result.violations.length} violation${result.violations.length === 1 ? "" : "s"})`);
+  lines.push("");
+  for (const v of result.violations) {
+    lines.push(`     ${chalk.red("\u2716")} ${chalk.dim(`[${v.rule}]`)} ${v.message}`);
+  }
   return lines.join("\n");
 }
 

@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "chalk": "^5.4.1"
+    "chalk": "^5.4.1",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

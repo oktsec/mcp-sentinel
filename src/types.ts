@@ -115,6 +115,37 @@ export interface DiffResult {
   entries: DiffEntry[];
 }
 
+// --- Policy ---
+
+export interface PolicyRule {
+  deny?: {
+    categories?: ToolCategory[];
+    tools?: string[];
+  };
+  require?: {
+    aguara?: "clean";
+    maxTools?: number;
+  };
+  allow?: {
+    tools?: string[];
+  };
+}
+
+export interface Policy {
+  rules: PolicyRule;
+}
+
+export interface PolicyViolation {
+  rule: string;
+  message: string;
+  severity: "error";
+}
+
+export interface PolicyResult {
+  passed: boolean;
+  violations: PolicyViolation[];
+}
+
 export interface CliOptions {
   targets: ServerTarget[];
   json: boolean;
@@ -124,4 +155,5 @@ export interface CliOptions {
   diff: string | false;
   config: boolean;
   failOnFindings: boolean;
+  policy: string | false;
 }
