@@ -126,6 +126,14 @@ async function main(): Promise<void> {
     await writeFile(options.markdown, md, "utf-8");
     console.log(`Report saved to ${options.markdown}`);
   }
+
+  // CI exit code: exit 2 if aguara found issues
+  if (options.failOnFindings) {
+    const hasFindings = results.some((r) => r.aguara.findings.length > 0);
+    if (hasFindings) {
+      process.exit(2);
+    }
+  }
 }
 
 main().catch((err: unknown) => {

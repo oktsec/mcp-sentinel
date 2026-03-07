@@ -44,6 +44,7 @@ describe("parseArgs", () => {
       timeout: 30_000,
       diff: false,
       config: false,
+      failOnFindings: false,
     });
   });
 

@@ -123,4 +123,5 @@ export interface CliOptions {
   timeout: number;
   diff: string | false;
   config: boolean;
+  failOnFindings: boolean;
 }

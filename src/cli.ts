@@ -21,6 +21,7 @@ OPTIONS
   --config             Auto-detect servers from config files (Claude Desktop, Cursor, Windsurf)
   --transport <type>   Force transport type: stdio, sse, streamable-http
   --diff <file.json>   Compare current scan against a previous JSON scan
+  --fail-on-findings   Exit with code 2 if aguara finds security issues (for CI)
   --json               Output results as JSON
   --markdown <file>    Export report as markdown file
   --no-color           Disable colored output
@@ -60,6 +61,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
   const json = args.includes("--json");
   const noColor = args.includes("--no-color");
   const config = args.includes("--config");
+  const failOnFindings = args.includes("--fail-on-findings");
 
   let timeout = 30_000;
   const timeoutIdx = args.indexOf("--timeout");
@@ -113,7 +115,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
   const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff"]);
 
   const filteredArgs = args.filter((arg, i) => {
-    if (arg === "--json" || arg === "--no-color" || arg === "--config") return false;
+    if (arg === "--json" || arg === "--no-color" || arg === "--config" || arg === "--fail-on-findings") return false;
     if (FLAG_ARGS.has(arg)) return false;
     if (i > 0 && FLAG_ARGS.has(args[i - 1]!)) return false;
     return true;
@@ -131,7 +133,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout, diff, config };
+  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {

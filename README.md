@@ -152,6 +152,7 @@ This is **categorization for visibility**, not security analysis. For security, 
 | `--diff <file.json>` | Compare against a previous JSON scan |
 | `--transport <type>` | Force transport: `stdio`, `sse`, `streamable-http` |
 | `--config` | Auto-detect and scan servers from config files |
+| `--fail-on-findings` | Exit code 2 if aguara finds security issues (for CI) |
 | `--no-color` | Disable colored output |
 | `--timeout <ms>` | Connection timeout in ms (default: 30000) |
 | `-h, --help` | Show help |
