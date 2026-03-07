@@ -99,7 +99,7 @@ describe("formatOutput", () => {
 describe("formatJson", () => {
   it("returns valid JSON for single result", () => {
     const json = formatJson(makeScanResult());
-    expect(() => JSON.parse(json)).not.toThrow();
+    expect(() => JSON.parse(json) as unknown).not.toThrow();
   });
 
   it("returns valid JSON for array of results", () => {
