@@ -43,6 +43,8 @@ describe("parseArgs", () => {
       noColor: false,
       timeout: 30_000,
       diff: false,
+      config: false,
+      failOnFindings: false,
     });
   });
 
@@ -169,5 +171,18 @@ describe("parseArgs", () => {
       { type: "stdio", command: "npx", args: ["@mcp/server-a"] },
       { type: "streamable-http", url: "http://localhost:3000/mcp" },
     ]);
+  });
+
+  // --config
+  it("parses --config flag with no targets", () => {
+    const result = parseArgs(["node", "mcp-inspector", "--config"]);
+    expect(result?.config).toBe(true);
+    expect(result?.targets).toEqual([]);
+  });
+
+  it("parses --config flag with additional targets", () => {
+    const result = parseArgs(["node", "mcp-inspector", "--config", "npx", "@mcp/server"]);
+    expect(result?.config).toBe(true);
+    expect(result?.targets).toEqual([{ type: "stdio", command: "npx", args: ["@mcp/server"] }]);
   });
 });

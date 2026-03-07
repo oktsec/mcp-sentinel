@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import chalk from "chalk";
 import { parseArgs } from "./cli.js";
 import {
   connectToServer, getServerInfo, getServerCapabilities,
@@ -10,6 +11,7 @@ import { scanWithAguara } from "./aguara.js";
 import { formatOutput, formatJson, formatDiff, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
 import { diffScans } from "./diff.js";
+import { discoverServers } from "./config.js";
 import type { ScanResult, ServerTarget } from "./types.js";
 
 function targetLabel(target: ServerTarget): string {
@@ -63,6 +65,21 @@ async function main(): Promise<void> {
     process.env["FORCE_COLOR"] = "0";
   }
 
+  // Discover servers from config files if --config is set
+  if (options.config) {
+    const discovered = await discoverServers();
+    if (discovered.length === 0) {
+      console.error(formatError("No MCP servers found in config files."));
+      process.exit(1);
+    }
+    console.log(chalk.bold(`Found ${discovered.length} server(s) in config files:\n`));
+    for (const s of discovered) {
+      console.log(`  ${chalk.dim(s.source)} ${chalk.cyan(s.name)}`);
+      options.targets.push(s.target);
+    }
+    console.log("");
+  }
+
   const results: ScanResult[] = [];
 
   for (const target of options.targets) {
@@ -108,6 +125,14 @@ async function main(): Promise<void> {
     const md = formatMarkdown(results);
     await writeFile(options.markdown, md, "utf-8");
     console.log(`Report saved to ${options.markdown}`);
+  }
+
+  // CI exit code: exit 2 if aguara found issues
+  if (options.failOnFindings) {
+    const hasFindings = results.some((r) => r.aguara.findings.length > 0);
+    if (hasFindings) {
+      process.exit(2);
+    }
   }
 }
 

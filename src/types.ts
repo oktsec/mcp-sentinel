@@ -122,4 +122,6 @@ export interface CliOptions {
   noColor: boolean;
   timeout: number;
   diff: string | false;
+  config: boolean;
+  failOnFindings: boolean;
 }
