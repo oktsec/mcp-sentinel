@@ -45,6 +45,7 @@ describe("parseArgs", () => {
       diff: false,
       config: false,
       failOnFindings: false,
+      policy: false,
     });
   });
 

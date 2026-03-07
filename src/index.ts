@@ -8,11 +8,12 @@ import {
 } from "./scanner.js";
 import { analyzeTools, summarize } from "./analyzer.js";
 import { scanWithAguara } from "./aguara.js";
-import { formatOutput, formatJson, formatDiff, formatError } from "./formatter.js";
+import { formatOutput, formatJson, formatDiff, formatPolicyResult, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
 import { diffScans } from "./diff.js";
 import { discoverServers } from "./config.js";
-import type { ScanResult, ServerTarget } from "./types.js";
+import { loadPolicy, findPolicy, evaluatePolicy } from "./policy.js";
+import type { ScanResult, ServerTarget, Policy } from "./types.js";
 
 function targetLabel(target: ServerTarget): string {
   if (target.type === "stdio") {
@@ -125,6 +126,48 @@ async function main(): Promise<void> {
     const md = formatMarkdown(results);
     await writeFile(options.markdown, md, "utf-8");
     console.log(`Report saved to ${options.markdown}`);
+  }
+
+  // Policy enforcement
+  let policy: Policy | null = null;
+  if (options.policy !== false) {
+    const policyPath = options.policy === "auto" ? await findPolicy() : options.policy;
+    if (policyPath !== null) {
+      policy = await loadPolicy(policyPath);
+      if (!options.json) {
+        console.log(`\n${chalk.bold("\u{1F6E1}\uFE0F  Policy:")} ${policyPath}\n`);
+      }
+    } else if (options.policy === "auto") {
+      // No policy file found, skip silently
+    } else {
+      console.error(formatError(`Policy file not found: ${options.policy}`));
+      process.exit(1);
+    }
+  }
+
+  if (policy !== null) {
+    let anyFailed = false;
+    const policyResults: Array<{ server: string; result: ReturnType<typeof evaluatePolicy> }> = [];
+
+    for (const scanResult of results) {
+      const pr = evaluatePolicy(policy, scanResult);
+      policyResults.push({ server: scanResult.server.name, result: pr });
+      if (!pr.passed) anyFailed = true;
+      if (!options.json) {
+        console.log(formatPolicyResult(pr, scanResult.server.name));
+      }
+    }
+
+    if (!options.json) {
+      console.log("");
+    } else {
+      console.log(JSON.stringify(policyResults, null, 2));
+    }
+
+    if (anyFailed) {
+      process.exit(2);
+    }
+    return;
   }
 
   // CI exit code: exit 2 if aguara found issues

@@ -18,6 +18,7 @@ TRANSPORTS
   streamable-http (default for URLs)  Connect via Streamable HTTP
 
 OPTIONS
+  --policy <file>      Enforce a security policy (.mcp-policy.yml auto-detected)
   --config             Auto-detect servers from config files (Claude Desktop, Cursor, Windsurf)
   --transport <type>   Force transport type: stdio, sse, streamable-http
   --diff <file.json>   Compare current scan against a previous JSON scan
@@ -112,7 +113,19 @@ export function parseArgs(argv: string[]): CliOptions | null {
     diff = diffVal;
   }
 
-  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff"]);
+  let policy: string | false = false;
+  const policyIdx = args.indexOf("--policy");
+  if (policyIdx !== -1) {
+    const policyVal = args[policyIdx + 1];
+    if (policyVal === undefined || policyVal.startsWith("--")) {
+      // --policy without a file means auto-detect
+      policy = "auto";
+    } else {
+      policy = policyVal;
+    }
+  }
+
+  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff", "--policy"]);
 
   const filteredArgs = args.filter((arg, i) => {
     if (arg === "--json" || arg === "--no-color" || arg === "--config" || arg === "--fail-on-findings") return false;
@@ -133,7 +146,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings };
+  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings, policy };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {
