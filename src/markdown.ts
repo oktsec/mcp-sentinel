@@ -91,15 +91,18 @@ export function formatMarkdown(results: ScanResult[]): string {
     if (result.aguara.available && result.aguara.findings.length > 0) {
       lines.push("### Security Findings (Aguara)");
       lines.push("");
-      lines.push("| Severity | Rule | Description |");
-      lines.push("|----------|------|-------------|");
+      lines.push("| Severity | Rule | Name | Tool | Category |");
+      lines.push("|----------|------|------|------|----------|");
       for (const f of result.aguara.findings) {
-        lines.push(`| ${f.severity} | ${f.ruleId} | ${f.ruleName} |`);
+        lines.push(`| ${f.severity} | ${f.ruleId} | ${f.ruleName} | ${f.toolName} | ${f.category} |`);
       }
       lines.push("");
       lines.push(`> ${result.aguara.summary}`);
       lines.push("");
-    } else if (!result.aguara.available) {
+    } else if (result.aguara.available) {
+      lines.push("> No security findings");
+      lines.push("");
+    } else {
       lines.push(`> ${result.aguara.summary}`);
       lines.push("");
     }

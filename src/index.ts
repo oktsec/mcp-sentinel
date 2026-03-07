@@ -13,7 +13,7 @@ import { formatMarkdown } from "./markdown.js";
 import { diffScans } from "./diff.js";
 import { discoverServers } from "./config.js";
 import { loadPolicy, findPolicy, evaluatePolicy } from "./policy.js";
-import type { ScanResult, ServerTarget, Policy } from "./types.js";
+import type { ScanResult, ServerTarget, Policy, AguaraFinding } from "./types.js";
 
 function targetLabel(target: ServerTarget): string {
   if (target.type === "stdio") {
@@ -38,9 +38,28 @@ async function scanServer(target: ServerTarget, timeout: number): Promise<ScanRe
     ]);
 
     const instructions = getInstructions(connection.client);
-    const tools = analyzeTools(rawTools);
+
+    // Run aguara on all content (tools, resources, prompts)
+    const aguara = await scanWithAguara({
+      tools: rawTools,
+      resources,
+      resourceTemplates,
+      prompts,
+    });
+
+    // Build per-tool findings map for analyzer
+    const findingsByTool = new Map<string, AguaraFinding[]>();
+    for (const f of aguara.findings) {
+      if (f.toolName.length > 0 && !f.toolName.startsWith("[")) {
+        const existing = findingsByTool.get(f.toolName) ?? [];
+        existing.push(f);
+        findingsByTool.set(f.toolName, existing);
+      }
+    }
+
+    // Analyze tools with aguara context for better categorization
+    const tools = analyzeTools(rawTools, findingsByTool);
     const toolSummary = summarize(tools);
-    const aguara = await scanWithAguara(rawTools);
     const scanDuration = Date.now() - startTime;
 
     return {
@@ -89,7 +108,7 @@ async function main(): Promise<void> {
       results.push(result);
 
       if (!options.json && options.diff === false) {
-        console.log(formatOutput(result));
+        console.log(formatOutput(result, { verbose: options.verbose }));
       }
     } catch (err) {
       const label = targetLabel(target);
