@@ -25,13 +25,9 @@ function buildScanContent(tools: ToolInfo[]): string {
     lines.push(tool.description);
     lines.push("");
 
-    if (tool.inputSchema !== undefined) {
-      const props = tool.inputSchema["properties"];
-      if (typeof props === "object" && props !== null) {
-        const paramNames = Object.keys(props as Record<string, unknown>);
-        lines.push(`Parameters: ${paramNames.join(", ")}`);
-        lines.push("");
-      }
+    if (tool.parameters.length > 0) {
+      lines.push(`Parameters: ${tool.parameters.map((p) => p.name).join(", ")}`);
+      lines.push("");
     }
   }
 

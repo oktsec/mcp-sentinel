@@ -4,8 +4,8 @@ import type { ToolInfo } from "../types.js";
 
 describe("scanWithAguara", () => {
   const sampleTools: ToolInfo[] = [
-    { name: "get_file", description: "Read a file" },
-    { name: "write_file", description: "Write a file" },
+    { name: "get_file", description: "Read a file", parameters: [] },
+    { name: "write_file", description: "Write a file", parameters: [] },
   ];
 
   it("returns a result with available field", async () => {

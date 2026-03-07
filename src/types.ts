@@ -1,15 +1,71 @@
 export type ToolCategory = "read" | "write" | "admin";
 
+// --- Server metadata ---
+
+export interface ServerInfo {
+  name: string;
+  version: string;
+}
+
+export interface ServerCapabilities {
+  tools: boolean;
+  resources: boolean;
+  prompts: boolean;
+  logging: boolean;
+}
+
+// --- Tools ---
+
+export interface SchemaProperty {
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+}
+
 export interface ToolInfo {
   name: string;
   description: string;
-  inputSchema?: Record<string, unknown>;
+  parameters: SchemaProperty[];
+  rawInputSchema?: Record<string, unknown>;
 }
 
 export interface AnalyzedTool {
   tool: ToolInfo;
   category: ToolCategory;
 }
+
+// --- Resources ---
+
+export interface ResourceInfo {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType: string;
+}
+
+export interface ResourceTemplateInfo {
+  uriTemplate: string;
+  name: string;
+  description: string;
+  mimeType: string;
+}
+
+// --- Prompts ---
+
+export interface PromptArgument {
+  name: string;
+  description: string;
+  required: boolean;
+}
+
+export interface PromptInfo {
+  name: string;
+  description: string;
+  arguments: PromptArgument[];
+}
+
+// --- Aguara ---
 
 export interface AguaraFinding {
   severity: string;
@@ -25,15 +81,17 @@ export interface AguaraResult {
   summary: string;
 }
 
-export interface ServerInfo {
-  name: string;
-  version: string;
-}
+// --- Scan result ---
 
 export interface ScanResult {
   server: ServerInfo;
+  capabilities: ServerCapabilities;
   tools: AnalyzedTool[];
   toolSummary: { read: number; write: number; admin: number };
+  resources: ResourceInfo[];
+  resourceTemplates: ResourceTemplateInfo[];
+  prompts: PromptInfo[];
+  instructions: string | null;
   aguara: AguaraResult;
   scanDuration: number;
 }
