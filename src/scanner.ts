@@ -1,8 +1,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type {
   ServerInfo,
   ServerCapabilities,
+  ServerTarget,
   ToolInfo,
   SchemaProperty,
   ResourceInfo,
@@ -13,19 +17,29 @@ import type {
 
 export interface ScanConnection {
   client: Client;
-  transport: StdioClientTransport;
+  transport: Transport;
+}
+
+function createTransport(target: ServerTarget): Transport {
+  switch (target.type) {
+    case "stdio":
+      return new StdioClientTransport({
+        command: target.command,
+        args: target.args,
+        stderr: "pipe",
+      });
+    case "sse":
+      return new SSEClientTransport(new URL(target.url));
+    case "streamable-http":
+      return new StreamableHTTPClientTransport(new URL(target.url));
+  }
 }
 
 export async function connectToServer(
-  command: string,
-  args: string[],
+  target: ServerTarget,
   timeout: number,
 ): Promise<ScanConnection> {
-  const transport = new StdioClientTransport({
-    command,
-    args,
-    stderr: "pipe",
-  });
+  const transport = createTransport(target);
 
   const client = new Client({
     name: "mcp-inspector",

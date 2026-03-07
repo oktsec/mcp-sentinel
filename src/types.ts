@@ -96,9 +96,23 @@ export interface ScanResult {
   scanDuration: number;
 }
 
-export interface ServerTarget {
-  command: string;
-  args: string[];
+export type ServerTarget =
+  | { type: "stdio"; command: string; args: string[] }
+  | { type: "sse"; url: string }
+  | { type: "streamable-http"; url: string };
+
+// --- Diff ---
+
+export interface DiffEntry {
+  kind: "added" | "removed" | "changed";
+  area: "tool" | "resource" | "resource-template" | "prompt" | "capability" | "instruction" | "version";
+  name: string;
+  detail?: string;
+}
+
+export interface DiffResult {
+  server: string;
+  entries: DiffEntry[];
 }
 
 export interface CliOptions {
@@ -107,4 +121,5 @@ export interface CliOptions {
   markdown: string | false;
   noColor: boolean;
   timeout: number;
+  diff: string | false;
 }

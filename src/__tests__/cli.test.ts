@@ -34,14 +34,15 @@ describe("parseArgs", () => {
     expect(consoleSpy).toHaveBeenCalledWith("0.1.0");
   });
 
-  it("parses a single server target", () => {
+  it("parses a single stdio server target", () => {
     const result = parseArgs(["node", "mcp-inspector", "npx", "@mcp/server"]);
     expect(result).toEqual({
-      targets: [{ command: "npx", args: ["@mcp/server"] }],
+      targets: [{ type: "stdio", command: "npx", args: ["@mcp/server"] }],
       json: false,
       markdown: false,
       noColor: false,
       timeout: 30_000,
+      diff: false,
     });
   });
 
@@ -51,8 +52,8 @@ describe("parseArgs", () => {
       "npx", "@mcp/server-a", "---", "npx", "@mcp/server-b", "arg1",
     ]);
     expect(result?.targets).toEqual([
-      { command: "npx", args: ["@mcp/server-a"] },
-      { command: "npx", args: ["@mcp/server-b", "arg1"] },
+      { type: "stdio", command: "npx", args: ["@mcp/server-a"] },
+      { type: "stdio", command: "npx", args: ["@mcp/server-b", "arg1"] },
     ]);
   });
 
@@ -100,8 +101,73 @@ describe("parseArgs", () => {
   it("preserves server args correctly", () => {
     const result = parseArgs(["node", "mcp-inspector", "npx", "@mcp/fs", "/tmp", "/home"]);
     expect(result?.targets[0]).toEqual({
+      type: "stdio",
       command: "npx",
       args: ["@mcp/fs", "/tmp", "/home"],
     });
+  });
+
+  // URL-based targets
+  it("parses an HTTP URL as streamable-http target", () => {
+    const result = parseArgs(["node", "mcp-inspector", "http://localhost:3000/mcp"]);
+    expect(result?.targets[0]).toEqual({
+      type: "streamable-http",
+      url: "http://localhost:3000/mcp",
+    });
+  });
+
+  it("parses an HTTPS URL as streamable-http target", () => {
+    const result = parseArgs(["node", "mcp-inspector", "https://example.com/mcp"]);
+    expect(result?.targets[0]).toEqual({
+      type: "streamable-http",
+      url: "https://example.com/mcp",
+    });
+  });
+
+  it("uses sse transport when --transport sse with URL", () => {
+    const result = parseArgs(["node", "mcp-inspector", "--transport", "sse", "http://localhost:3000/sse"]);
+    expect(result?.targets[0]).toEqual({
+      type: "sse",
+      url: "http://localhost:3000/sse",
+    });
+  });
+
+  it("exits on --transport with invalid value", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-inspector", "--transport", "invalid", "http://localhost:3000/mcp"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("exits on --transport stdio with URL target", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-inspector", "--transport", "stdio", "http://localhost:3000/mcp"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("exits on --transport sse with command target", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-inspector", "--transport", "sse", "npx", "@mcp/server"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("exits when URL target has extra args", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-inspector", "http://localhost:3000/mcp", "extra"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("mixes stdio and URL targets with ---", () => {
+    const result = parseArgs([
+      "node", "mcp-inspector",
+      "npx", "@mcp/server-a", "---", "http://localhost:3000/mcp",
+    ]);
+    expect(result?.targets).toEqual([
+      { type: "stdio", command: "npx", args: ["@mcp/server-a"] },
+      { type: "streamable-http", url: "http://localhost:3000/mcp" },
+    ]);
   });
 });
