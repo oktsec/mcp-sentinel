@@ -1,7 +1,7 @@
 {
   "name": "mcp-inspector",
   "version": "0.1.0",
-  "description": "Scan MCP servers to detect exposed tools, destructive operations, and security risks",
+  "description": "Audit and enforce security policies on MCP servers — policy engine, drift detection, CI/CD gate",
   "author": "Gustavo Aragon (@oktsec)",
   "license": "MIT",
   "type": "module",
@@ -50,9 +50,17 @@
     "mcp",
     "model-context-protocol",
     "security",
+    "policy",
     "scanner",
-    "cli",
     "audit",
-    "ai-safety"
-  ]
+    "cli",
+    "ai-safety",
+    "aguara",
+    "llm",
+    "ai-agents"
+  ],
+  "homepage": "https://github.com/oktsec/mcp-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/oktsec/mcp-inspector/issues"
+  }
 }
