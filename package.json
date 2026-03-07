@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "Audit and enforce security policies on MCP servers — policy engine, drift detection, CI/CD gate",
   "author": "Gustavo Aragon (@oktsec)",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "bin": {
     "mcp-sentinel": "bin/mcp-sentinel.js"

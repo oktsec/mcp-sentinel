@@ -120,19 +120,19 @@ jobs:
 # Scan a remote server over HTTP
 npx mcp-sentinel http://localhost:3000/mcp
 
-# Scan all servers from Claude Desktop, Cursor, or Windsurf config
+# Scan all servers from your Claude Desktop, Cursor, or Windsurf config
 npx mcp-sentinel --config
 
-# Detect changes between server versions
-npx mcp-sentinel npx @mcp/server --json > baseline.json
-npx mcp-sentinel npx @mcp/server --diff baseline.json
+# Save a scan and detect changes later (drift detection)
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --json > baseline.json
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --diff baseline.json
 
 # Scan multiple servers in one command
-npx mcp-sentinel npx @mcp/server-a --- npx @mcp/server-b
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --- npx @modelcontextprotocol/server-github
 
 # Export as JSON or Markdown
-npx mcp-sentinel --json npx @mcp/server
-npx mcp-sentinel --markdown report.md npx @mcp/server
+npx mcp-sentinel --json npx @modelcontextprotocol/server-filesystem /tmp
+npx mcp-sentinel --markdown report.md npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ## Policy Reference
@@ -220,4 +220,4 @@ Contributions welcome. Please open an issue first to discuss what you'd like to 
 
 ## License
 
-[MIT](LICENSE) — Gustavo Aragon ([@oktsec](https://github.com/oktsec))
+[Apache 2.0](LICENSE) — Gustavo Aragon ([@oktsec](https://github.com/oktsec))
