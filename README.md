@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">MCP Sentinel</h1>
   <p align="center">
-    <strong>Audit and enforce security policies on MCP servers before you trust them.</strong>
+    <strong>Know what your MCP servers can do — before your AI agent does.</strong>
   </p>
   <p align="center">
     <a href="https://www.npmjs.com/package/mcp-sentinel"><img src="https://img.shields.io/npm/v/mcp-sentinel.svg" alt="npm version"></a>
@@ -12,15 +12,22 @@
 
 ---
 
-MCP servers run third-party code with access to your files, credentials, and shell. MCP Sentinel connects to any server, shows you exactly what it exposes, and **enforces security policies** — blocking dangerous tools before your agent can call them.
+## The Problem
+
+You add an MCP server to Claude Desktop, Cursor, or your agent framework. Now that server has tools your AI can call — tools that might read your files, run shell commands, or delete data.
+
+**You're trusting code you haven't reviewed.**
+
+MCP Sentinel connects to any MCP server, shows you every tool it exposes, and lets you define security policies that block dangerous ones automatically.
+
+## Quick Start
 
 ```bash
-npx mcp-sentinel --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
+# Scan any MCP server — no install needed
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
-## Real Output
-
-Scanned against the official [MCP filesystem server](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem):
+That's it. You'll see every tool the server exposes, categorized by risk:
 
 ```
 🔍 MCP Sentinel v0.1.0
@@ -28,46 +35,40 @@ Scanned against the official [MCP filesystem server](https://www.npmjs.com/packa
 📦 Server: secure-filesystem-server v0.2.0
    Capabilities: tools
 
-🔧 Tools (14)  11 read • 3 write • 0 admin
+🔧 Tools (14)  11 read · 3 write · 0 admin
 
-  ✅ read_file        Read the complete contents of a file as text... (3 params)
-     * string   path
-       number   tail
-       number   head
-  ✅ read_text_file   Read the complete contents of a file from... (3 params)
-  ✅ read_media_file  Read an image or audio file... (1 params)
+  ✅ read_file            Read the complete contents of a file... (3 params)
   ✅ read_multiple_files  Read multiple files simultaneously... (1 params)
-  ✏️ write_file       Create a new file or overwrite an existing... [write] (2 params)
-     * string   path
-     * string   content
-  ✅ edit_file         Make line-based edits to a text file... (3 params)
-  ✏️ create_directory  Create a new directory... [write] (1 params)
-  ✅ list_directory    Get a detailed listing of all files... (1 params)
-  ✏️ move_file         Move or rename files and directories... [write] (2 params)
-  ✅ search_files      Recursively search for files... (3 params)
-  ✅ get_file_info     Retrieve detailed metadata... (1 params)
-  ✅ list_allowed_directories  Returns the list of allowed directories
-
-🛡️  Aguara Security Analysis
-
-  0 finding(s)
+  ✏️ write_file           Create a new file or overwrite... [write] (2 params)
+  ✏️ create_directory     Create a new directory... [write] (1 params)
+  ✏️ move_file            Move or rename files... [write] (2 params)
+  ✅ list_directory       Get a detailed listing of all files... (1 params)
+  ✅ search_files         Recursively search for files... (3 params)
+  ...
 
 Scanned in 1706ms
 ```
 
-### With Policy Enforcement
+## Add a Security Policy
 
-Using this policy:
+Create a `.mcp-policy.yml` in your project root:
 
 ```yaml
-# .mcp-policy.yml
 deny:
-  categories: [admin]
-  tools: ["write_*", "move_*"]
+  categories: [admin]           # Block dangerous tools (delete, exec, shell)
+  tools: ["write_*", "move_*"]  # Block by name pattern
+
 require:
-  maxTools: 10
+  maxTools: 10                  # Limit attack surface
+
 allow:
-  tools: ["write_file"]   # Allow write_file despite deny pattern
+  tools: ["write_file"]         # Exceptions to deny rules
+```
+
+Then enforce it:
+
+```bash
+npx mcp-sentinel --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
 ```
@@ -79,68 +80,25 @@ allow:
      ✖ [require.maxTools] Server exposes 14 tools, policy allows max 10
 ```
 
-**Exit code 2** — `write_file` was allowed by the exception, but `move_file` and the tool count violated the policy. Your CI pipeline stops here.
+Exit code `2` = violations found. Your CI pipeline stops here.
 
-## Why MCP Sentinel
+> `write_file` was allowed by the exception, but `move_file` and the tool count violated the policy.
 
-Every MCP client already shows you the tool list. MCP Sentinel goes further:
+## Use It in CI/CD
 
-| Feature | MCP Client | MCP Sentinel |
-|---------|-----------|---------------|
-| See tool list | Yes | Yes |
-| **Security policy enforcement** | No | **Yes** |
-| **CI/CD pipeline gate** | No | **Yes** |
-| **Drift detection** between versions | No | **Yes** |
-| **Fleet scan** all configured servers | No | **Yes** |
-| Deep security analysis (aguara) | No | **Yes** |
-| Exportable reports (JSON/Markdown) | No | **Yes** |
-
-## Policy Enforcement
-
-Define what's allowed in `.mcp-policy.yml`:
+Add one line to your GitHub Actions workflow:
 
 ```yaml
-deny:
-  categories:
-    - admin                    # No admin tools (delete, exec, shell)
-  tools:
-    - "execute_*"              # Block all execution patterns
-    - "push_*"                 # Block push operations
-
-require:
-  aguara: clean                # Zero security findings required
-  maxTools: 20                 # Limit attack surface
-
-allow:
-  tools:
-    - "execute_query"          # Allow specific tools even if pattern-denied
+- run: npx mcp-sentinel --policy .mcp-policy.yml npx ./your-mcp-server
 ```
 
-### Policy Rules
+If the server violates your policy, the build fails. See a [full workflow example](examples/github-action.yml).
 
-| Rule | Description |
-|------|-------------|
-| `deny.categories` | Block tools by category: `read`, `write`, `admin` |
-| `deny.tools` | Block tools by name or glob pattern (`delete_*`, `exec*`) |
-| `require.aguara` | Require aguara scan with zero findings (`clean`) |
-| `require.maxTools` | Maximum number of tools a server can expose |
-| `allow.tools` | Exception list — allow specific tools even if they match deny rules |
-
-### Example Policies
-
-Ready-to-use policies in [`examples/policies/`](examples/policies/):
-
-| Policy | Use case |
-|--------|----------|
-| [`strict.yml`](examples/policies/strict.yml) | Production — blocks admin + write, requires aguara clean |
-| [`standard.yml`](examples/policies/standard.yml) | Development — blocks admin + exec patterns, allows writes |
-| [`permissive.yml`](examples/policies/permissive.yml) | Local dev — only blocks destructive patterns (delete, drop, destroy) |
-| [`ci-pipeline.yml`](examples/policies/ci-pipeline.yml) | CI/CD — blocks admin + deploy + push, requires aguara clean |
-
-### CI/CD Integration
+<details>
+<summary>Full GitHub Actions example</summary>
 
 ```yaml
-# .github/workflows/mcp-sentinel.yml
+# .github/workflows/mcp-audit.yml
 name: MCP Security Audit
 on: [pull_request]
 
@@ -152,86 +110,76 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npx mcp-sentinel --policy .mcp-policy.yml npx ./your-mcp-server
-        # Exit code 2 = policy violations → build fails
 ```
 
-See full example in [`examples/github-action.yml`](examples/github-action.yml).
+</details>
 
-## Install & Use
-
-```bash
-# No install needed
-npx mcp-sentinel <command> [args...]
-```
-
-### Quick Start
+## What Else Can It Do?
 
 ```bash
-# 1. Scan a server
-npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp
-
-# 2. Create a policy
-cat > .mcp-policy.yml << 'EOF'
-deny:
-  categories: [admin]
-  tools: ["execute_*", "delete_*"]
-require:
-  aguara: clean
-  maxTools: 20
-EOF
-
-# 3. Enforce it
-npx mcp-sentinel --policy .mcp-policy.yml npx @modelcontextprotocol/server-filesystem /tmp
-```
-
-### More Examples
-
-```bash
-# Scan remote servers via HTTP
+# Scan a remote server over HTTP
 npx mcp-sentinel http://localhost:3000/mcp
 
-# Scan all servers from your config (Claude Desktop, Cursor, Windsurf)
+# Scan all servers from Claude Desktop, Cursor, or Windsurf config
 npx mcp-sentinel --config
 
-# Diff mode: detect changes between server versions
+# Detect changes between server versions
 npx mcp-sentinel npx @mcp/server --json > baseline.json
 npx mcp-sentinel npx @mcp/server --diff baseline.json
 
-# Scan multiple servers at once
+# Scan multiple servers in one command
 npx mcp-sentinel npx @mcp/server-a --- npx @mcp/server-b
 
-# JSON output for scripting
+# Export as JSON or Markdown
 npx mcp-sentinel --json npx @mcp/server
-
-# Markdown report
 npx mcp-sentinel --markdown report.md npx @mcp/server
 ```
 
-### With Aguara (recommended)
+## Policy Reference
 
-Install [Aguara](https://github.com/garagon/aguara) for deep security analysis (prompt injection, exfiltration, supply chain, credential leaks):
+| Rule | What it does | Example |
+|------|-------------|---------|
+| `deny.categories` | Block tools by category | `[admin]`, `[admin, write]` |
+| `deny.tools` | Block by name or glob | `["delete_*", "run_command"]` |
+| `require.maxTools` | Max number of tools allowed | `20` |
+| `require.aguara` | Require zero security findings | `clean` |
+| `allow.tools` | Exceptions to deny rules | `["execute_query"]` |
+
+### Starter Policies
+
+Pick one from [`examples/policies/`](examples/policies/) and customize:
+
+| Policy | Best for |
+|--------|----------|
+| [`permissive.yml`](examples/policies/permissive.yml) | Local development — blocks only destructive patterns |
+| [`standard.yml`](examples/policies/standard.yml) | Team development — blocks admin + exec, allows writes |
+| [`strict.yml`](examples/policies/strict.yml) | Production — blocks admin + write, requires security scan |
+| [`ci-pipeline.yml`](examples/policies/ci-pipeline.yml) | CI/CD — blocks admin + deploy + push |
+
+## Deep Security Analysis with Aguara
+
+MCP Sentinel can optionally integrate with [Aguara](https://github.com/garagon/aguara), a security scanner with 177 rules that detects prompt injection, data exfiltration, credential leaks, and more.
 
 ```bash
+# Install Aguara (optional)
 curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
 ```
 
-MCP Sentinel auto-detects Aguara and runs its 177-rule engine against tool descriptions. Combine with `require.aguara: clean` in your policy to enforce zero findings.
+Once installed, MCP Sentinel auto-detects it and runs the analysis. Add `require.aguara: clean` to your policy to enforce zero findings.
 
-## Options
+## All Options
 
 | Flag | Description |
 |------|-------------|
-| `--policy <file>` | Enforce security policy (auto-detects `.mcp-policy.yml`) |
-| `--config` | Auto-detect and scan servers from config files |
-| `--diff <file.json>` | Compare against a previous JSON scan |
+| `--policy <file>` | Enforce a security policy (auto-detects `.mcp-policy.yml`) |
+| `--config` | Scan servers from Claude Desktop / Cursor / Windsurf config |
+| `--diff <file.json>` | Compare against a previous scan |
 | `--transport <type>` | Force transport: `stdio`, `sse`, `streamable-http` |
-| `--json` | Structured JSON output |
-| `--markdown <file>` | Export report as Markdown |
+| `--json` | JSON output |
+| `--markdown <file>` | Export Markdown report |
 | `--fail-on-findings` | Exit code 2 if aguara finds issues |
-| `--no-color` | Disable colored output |
+| `--no-color` | Disable colors |
 | `--timeout <ms>` | Connection timeout (default: 30000) |
-| `-h, --help` | Show help |
-| `-v, --version` | Show version |
 
 ## How It Works
 
@@ -241,13 +189,13 @@ MCP Sentinel auto-detects Aguara and runs its 177-rule engine against tool descr
             ┌──────── │  (local)       │
             │         └────────────────┘
 ┌───────────┤
-│ mcp-      │ HTTP/   ┌────────────────┐
-│ inspector │ SSE     │  MCP Server    │
+│  mcp-     │ HTTP/   ┌────────────────┐
+│  sentinel │ SSE     │  MCP Server    │
 │           ├──────── │  (remote)      │
-│ Scan      │         └────────────────┘
-│ Enforce   │
-│ Diff      │         ┌──────────────────┐
-│ Report    │ ──────► │  Aguara (177      │
+│  Scan     │         └────────────────┘
+│  Enforce  │
+│  Diff     │         ┌──────────────────┐
+│  Report   │ ──────► │  Aguara (177      │
 └───────────┘         │  security rules)  │
      │                └──────────────────┘
      ▼
@@ -266,24 +214,9 @@ MCP Sentinel is part of the [Aguara](https://github.com/garagon/aguara) security
 | **MCP Sentinel** | Policy enforcement — audit, enforce, and monitor MCP servers |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform — continuous monitoring of MCP registries |
 
-## Roadmap
-
-- [x] Runtime introspection (tools, resources, prompts, capabilities)
-- [x] **Policy enforcement engine**
-- [x] Aguara integration
-- [x] HTTP/SSE transport support
-- [x] Diff mode
-- [x] Config auto-detection (Claude Desktop, Cursor, Windsurf)
-- [ ] Per-server policy overrides
-- [ ] Registry integration (Smithery, mcp.run)
-- [ ] GitHub Action (reusable workflow)
-- [ ] VS Code extension
-
 ## Contributing
 
-Contributions welcome. Please open an issue first to discuss what you'd like to change.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development standards.
+Contributions welcome. Please open an issue first to discuss what you'd like to change. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
