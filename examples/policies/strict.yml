@@ -1,0 +1,11 @@
+# Strict policy — production environments
+# Blocks all admin tools, limits write access, requires clean security scan.
+
+deny:
+  categories:
+    - admin
+    - write
+
+require:
+  aguara: clean
+  maxTools: 15

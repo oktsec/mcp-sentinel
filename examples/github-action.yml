@@ -1,0 +1,29 @@
+# Example: MCP server security gate in GitHub Actions
+# Add this to .github/workflows/mcp-audit.yml
+#
+# This workflow scans your MCP server on every PR and blocks merging
+# if the server violates your security policy.
+
+name: MCP Security Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  mcp-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Optional: install aguara for deep security analysis
+      # - run: curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
+
+      - name: Scan MCP server
+        run: npx mcp-inspector --policy .mcp-policy.yml npx ./your-mcp-server
+        # Exit code 2 = policy violations found → build fails

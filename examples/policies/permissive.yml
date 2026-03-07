@@ -1,0 +1,13 @@
+# Permissive policy — local development / trusted servers
+# Only blocks the most dangerous patterns. Good starting point.
+
+deny:
+  tools:
+    - "delete_*"
+    - "drop_*"
+    - "destroy_*"
+    - "execute_shell"
+    - "run_command"
+
+require:
+  maxTools: 50
