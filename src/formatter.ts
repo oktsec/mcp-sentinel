@@ -4,8 +4,8 @@ import type {
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities,
 } from "./types.js";
 
-const VERSION = "0.1.2";
-const WIDTH = 60;
+const VERSION = "0.1.3";
+const WIDTH = 64;
 
 const CATEGORY_COLORS = {
   read: chalk.green,
@@ -19,10 +19,19 @@ const CATEGORY_ICONS = {
   admin: chalk.red("⚠"),
 } as const;
 
+function sanitize(text: string): string {
+  return text
+    .replace(/\n/g, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const cut = text.lastIndexOf(" ", max - 3);
-  return (cut > max * 0.5 ? text.slice(0, cut) : text.slice(0, max - 3)) + "...";
+  const clean = sanitize(text);
+  if (clean.length <= max) return clean;
+  const cut = clean.lastIndexOf(" ", max - 3);
+  return (cut > max * 0.5 ? clean.slice(0, cut) : clean.slice(0, max - 3)) + "...";
 }
 
 function box(text: string): string {
@@ -43,6 +52,10 @@ function rightAlign(left: string, right: string, width: number): string {
   const rightLen = stripAnsi(right).length;
   const gap = Math.max(2, width - leftLen - rightLen);
   return left + " ".repeat(gap) + right;
+}
+
+function divider(): string {
+  return chalk.dim(`  ${"─".repeat(WIDTH - 4)}`);
 }
 
 function formatToolBlock(analyzed: AnalyzedTool): string[] {
@@ -99,12 +112,39 @@ function formatPrompt(p: PromptInfo): string {
   return `  ${chalk.bold(p.name)}${desc}${args}`;
 }
 
+const SEV_MAP: Record<string, { label: string; color: (t: string) => string }> = {
+  "4": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "3": { label: "HIGH", color: chalk.red },
+  "2": { label: "MEDIUM", color: chalk.yellow },
+  "1": { label: "LOW", color: chalk.dim },
+  "CRITICAL": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "HIGH": { label: "HIGH", color: chalk.red },
+  "MEDIUM": { label: "MEDIUM", color: chalk.yellow },
+  "LOW": { label: "LOW", color: chalk.dim },
+};
+
+function sevInfo(severity: string): { label: string; color: (t: string) => string } {
+  return SEV_MAP[severity] ?? { label: severity, color: chalk.dim };
+}
+
 function formatFinding(finding: AguaraFinding): string {
-  const sevColor = finding.severity === "CRITICAL" ? chalk.bgRed.white
-    : finding.severity === "HIGH" ? chalk.red
-    : finding.severity === "MEDIUM" ? chalk.yellow
-    : chalk.dim;
-  return `  ${sevColor(finding.severity.padEnd(8))} ${finding.ruleId} ${chalk.dim(finding.ruleName)}`;
+  const { label, color } = sevInfo(finding.severity);
+  const sev = color(label.padEnd(8));
+  return `    ${sev}  ${chalk.white(finding.ruleId)} ${chalk.dim(finding.ruleName)}`;
+}
+
+function formatFindingSummary(findings: AguaraFinding[]): string {
+  const counts: Record<string, number> = {};
+  for (const f of findings) {
+    const { label } = sevInfo(f.severity);
+    counts[label] = (counts[label] ?? 0) + 1;
+  }
+  const parts: string[] = [];
+  if (counts["CRITICAL"] !== undefined) parts.push(chalk.bgRed.white.bold(` ${counts["CRITICAL"]} critical `));
+  if (counts["HIGH"] !== undefined) parts.push(chalk.red(`${counts["HIGH"]} high`));
+  if (counts["MEDIUM"] !== undefined) parts.push(chalk.yellow(`${counts["MEDIUM"]} medium`));
+  if (counts["LOW"] !== undefined) parts.push(chalk.dim(`${counts["LOW"]} low`));
+  return parts.join(chalk.dim(" · "));
 }
 
 function sectionHeader(icon: string, title: string, count?: number): string {
@@ -172,26 +212,30 @@ export function formatOutput(result: ScanResult): string {
 
   // Aguara
   if (aguara.available) {
-    lines.push(`  ${sectionHeader("🛡️ ", "Aguara Security Analysis")}`);
+    lines.push(divider());
     lines.push("");
     if (aguara.findings.length > 0) {
+      lines.push(`  ${sectionHeader("🛡️ ", "Security Findings", aguara.findings.length)}  ${formatFindingSummary(aguara.findings)}`);
+      lines.push("");
       for (const finding of aguara.findings) {
         lines.push(formatFinding(finding));
       }
-      lines.push("");
+    } else {
+      lines.push(`  🛡️  ${chalk.green.bold("No security findings")} ${chalk.dim("· aguara scan clean")}`);
     }
-    lines.push(`  ${aguara.summary}`);
     lines.push("");
   } else {
+    lines.push(divider());
+    lines.push("");
     lines.push(`  🛡️  ${chalk.dim("Install")} ${chalk.cyan("aguara")} ${chalk.dim("for deep security analysis")}`);
     lines.push(`     ${chalk.cyan("https://github.com/garagon/aguara")}`);
     lines.push("");
   }
 
   // Footer
-  lines.push(chalk.dim(`  Scanned in ${scanDuration}ms`));
+  lines.push(divider());
   lines.push("");
-  lines.push(`  ${chalk.dim("Deep scan:")} ${chalk.cyan.underline("https://aguarascan.com")}`);
+  lines.push(`  ${chalk.dim(`Scanned in ${scanDuration}ms`)}  ${chalk.dim("·")}  ${chalk.dim("Deep scan:")} ${chalk.cyan.underline("https://aguarascan.com")}`);
   lines.push("");
 
   return lines.join("\n");
@@ -239,7 +283,7 @@ export function formatPolicyResult(result: PolicyResult, serverName: string): st
     return lines.join("\n");
   }
 
-  lines.push(`  ${chalk.red("✖")} ${chalk.bold(serverName)} ${chalk.red(`policy FAILED`)} ${chalk.dim(`(${result.violations.length} violation${result.violations.length === 1 ? "" : "s"})`)}`);
+  lines.push(`  ${chalk.red("✖")} ${chalk.bold(serverName)} ${chalk.red("policy FAILED")} ${chalk.dim(`(${result.violations.length} violation${result.violations.length === 1 ? "" : "s"})`)}`);
   lines.push("");
   for (const v of result.violations) {
     lines.push(`    ${chalk.red("→")} ${chalk.dim(`[${v.rule}]`)} ${v.message}`);
