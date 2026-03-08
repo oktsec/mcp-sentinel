@@ -1,6 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { analyzeTools, categorizeTool, summarize } from "../analyzer.js";
-import type { ToolInfo } from "../types.js";
+import type { ToolInfo, AguaraFinding } from "../types.js";
+
+function makeFinding(overrides: Partial<AguaraFinding> = {}): AguaraFinding {
+  return {
+    severity: "HIGH",
+    ruleId: "TEST_001",
+    ruleName: "Test finding",
+    category: "prompt-injection",
+    description: "Test",
+    matchedText: "test",
+    toolName: "test",
+    ...overrides,
+  };
+}
 
 describe("categorizeTool", () => {
   it("categorizes read-only tools", () => {
@@ -76,5 +89,54 @@ describe("summarize", () => {
 
   it("handles empty list", () => {
     expect(summarize([])).toEqual({ read: 0, write: 0, admin: 0 });
+  });
+});
+
+describe("categorizeTool with aguara findings", () => {
+  it("escalates read tool to admin when critical prompt-injection found", () => {
+    const tool = { name: "get_fact", description: "Get a fun fact", parameters: [] };
+    const findings = [makeFinding({ severity: "CRITICAL", category: "prompt-injection" })];
+    expect(categorizeTool(tool, findings)).toBe("admin");
+  });
+
+  it("escalates read tool to admin when high exfiltration found", () => {
+    const tool = { name: "format_text", description: "Format some text", parameters: [] };
+    const findings = [makeFinding({ severity: "HIGH", category: "exfiltration" })];
+    expect(categorizeTool(tool, findings)).toBe("admin");
+  });
+
+  it("does not escalate for medium findings", () => {
+    const tool = { name: "get_data", description: "Get data", parameters: [] };
+    const findings = [makeFinding({ severity: "MEDIUM", category: "prompt-injection" })];
+    expect(categorizeTool(tool, findings)).toBe("read");
+  });
+
+  it("does not escalate for non-dangerous categories", () => {
+    const tool = { name: "get_data", description: "Get data", parameters: [] };
+    const findings = [makeFinding({ severity: "CRITICAL", category: "third-party-content" })];
+    expect(categorizeTool(tool, findings)).toBe("read");
+  });
+
+  it("escalates for credential-leak category", () => {
+    const tool = { name: "check_health", description: "Check health", parameters: [] };
+    const findings = [makeFinding({ severity: "HIGH", category: "credential-leak" })];
+    expect(categorizeTool(tool, findings)).toBe("admin");
+  });
+});
+
+describe("analyzeTools with findings map", () => {
+  it("applies per-tool findings and escalates categories", () => {
+    const tools: ToolInfo[] = [
+      { name: "safe_tool", description: "Safe", parameters: [] },
+      { name: "evil_tool", description: "Looks safe", parameters: [] },
+    ];
+    const findingsByTool = new Map<string, AguaraFinding[]>();
+    findingsByTool.set("evil_tool", [makeFinding({ severity: "CRITICAL", category: "exfiltration", toolName: "evil_tool" })]);
+
+    const result = analyzeTools(tools, findingsByTool);
+    expect(result[0]!.category).toBe("read");
+    expect(result[0]!.findings).toHaveLength(0);
+    expect(result[1]!.category).toBe("admin");
+    expect(result[1]!.findings).toHaveLength(1);
   });
 });

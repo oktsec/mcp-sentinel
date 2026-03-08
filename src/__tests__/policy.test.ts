@@ -96,7 +96,7 @@ describe("evaluatePolicy", () => {
     const scan = baseScan({
       aguara: {
         available: true,
-        findings: [{ severity: "HIGH", ruleId: "MCP_001", ruleName: "injection", matchedText: "" }],
+        findings: [{ severity: "HIGH", ruleId: "MCP_001", ruleName: "injection", category: "test", description: "", matchedText: "", toolName: "" }],
         summary: "1 finding",
       },
     });
@@ -117,7 +117,7 @@ describe("evaluatePolicy", () => {
     const policy: Policy = { rules: { require: { maxTools: 5 } } };
     const tools = Array.from({ length: 10 }, (_, i) => ({
       tool: { name: `tool_${i}`, description: "", parameters: [] },
-      category: "read" as const,
+      category: "read" as const, findings: [],
     }));
     const scan = baseScan({ tools });
     const result = evaluatePolicy(policy, scan);
@@ -172,6 +172,72 @@ describe("evaluatePolicy", () => {
     expect(result.passed).toBe(false);
     expect(result.violations).toHaveLength(1);
     expect(result.violations[0]?.message).toContain("execute_shell");
+  });
+
+  // deny.descriptions
+  it("denies tools by description pattern", () => {
+    const policy: Policy = { rules: { deny: { descriptions: ["*ssh*", "*credentials*"] } } };
+    const scan = baseScan({
+      tools: [
+        { tool: { name: "check_health", description: "Reads ~/.ssh/id_rsa for diagnostics", parameters: [] }, category: "read", findings: [] },
+        { tool: { name: "add_numbers", description: "Add two numbers", parameters: [] }, category: "read", findings: [] },
+      ],
+    });
+    const result = evaluatePolicy(policy, scan);
+    expect(result.passed).toBe(false);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]?.message).toContain("check_health");
+    expect(result.violations[0]?.message).toContain("*ssh*");
+  });
+
+  it("allows tool excepted from description deny", () => {
+    const policy: Policy = {
+      rules: {
+        deny: { descriptions: ["*ssh*"] },
+        allow: { tools: ["check_health"] },
+      },
+    };
+    const scan = baseScan({
+      tools: [
+        { tool: { name: "check_health", description: "Reads ~/.ssh/id_rsa", parameters: [] }, category: "read", findings: [] },
+      ],
+    });
+    const result = evaluatePolicy(policy, scan);
+    expect(result.passed).toBe(true);
+  });
+
+  // require.maxFindings
+  it("fails when findings exceed maxFindings per severity", () => {
+    const policy: Policy = { rules: { require: { maxFindings: { critical: 0, high: 1 } } } };
+    const scan = baseScan({
+      aguara: {
+        available: true,
+        findings: [
+          { severity: "CRITICAL", ruleId: "A", ruleName: "a", category: "test", description: "", matchedText: "", toolName: "" },
+          { severity: "HIGH", ruleId: "B", ruleName: "b", category: "test", description: "", matchedText: "", toolName: "" },
+          { severity: "HIGH", ruleId: "C", ruleName: "c", category: "test", description: "", matchedText: "", toolName: "" },
+        ],
+        summary: "3 findings",
+      },
+    });
+    const result = evaluatePolicy(policy, scan);
+    expect(result.passed).toBe(false);
+    expect(result.violations).toHaveLength(2); // 1 critical > 0, 2 high > 1
+  });
+
+  it("passes when findings are within maxFindings limits", () => {
+    const policy: Policy = { rules: { require: { maxFindings: { critical: 0, high: 2 } } } };
+    const scan = baseScan({
+      aguara: {
+        available: true,
+        findings: [
+          { severity: "HIGH", ruleId: "A", ruleName: "a", category: "test", description: "", matchedText: "", toolName: "" },
+        ],
+        summary: "1 finding",
+      },
+    });
+    const result = evaluatePolicy(policy, scan);
+    expect(result.passed).toBe(true);
   });
 
   // Combined rules

@@ -47,6 +47,7 @@ describe("parseArgs", () => {
       failOnFindings: false,
       policy: false,
       verbose: false,
+      sarif: false,
       header: [],
     });
   });

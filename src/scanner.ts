@@ -20,7 +20,18 @@ export interface ScanConnection {
   transport: Transport;
 }
 
-function createTransport(target: ServerTarget): Transport {
+function parseHeaders(headerStrings: string[]): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const h of headerStrings) {
+    const idx = h.indexOf(":");
+    if (idx > 0) {
+      headers[h.slice(0, idx).trim()] = h.slice(idx + 1).trim();
+    }
+  }
+  return headers;
+}
+
+function createTransport(target: ServerTarget, headerStrings: string[] = []): Transport {
   switch (target.type) {
     case "stdio":
       return new StdioClientTransport({
@@ -28,18 +39,25 @@ function createTransport(target: ServerTarget): Transport {
         args: target.args,
         stderr: "pipe",
       });
-    case "sse":
-      return new SSEClientTransport(new URL(target.url));
-    case "streamable-http":
-      return new StreamableHTTPClientTransport(new URL(target.url));
+    case "sse": {
+      const headers = parseHeaders(headerStrings);
+      const opts = Object.keys(headers).length > 0 ? { requestInit: { headers } } : undefined;
+      return new SSEClientTransport(new URL(target.url), opts);
+    }
+    case "streamable-http": {
+      const headers = parseHeaders(headerStrings);
+      const opts = Object.keys(headers).length > 0 ? { requestInit: { headers } } : undefined;
+      return new StreamableHTTPClientTransport(new URL(target.url), opts);
+    }
   }
 }
 
 export async function connectToServer(
   target: ServerTarget,
   timeout: number,
+  headers: string[] = [],
 ): Promise<ScanConnection> {
-  const transport = createTransport(target);
+  const transport = createTransport(target, headers);
 
   const client = new Client({
     name: "mcp-sentinel",

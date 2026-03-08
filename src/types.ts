@@ -169,5 +169,6 @@ export interface CliOptions {
   failOnFindings: boolean;
   policy: string | false;
   verbose: boolean;
+  sarif: string | false;
   header: string[];
 }
