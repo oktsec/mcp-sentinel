@@ -5,7 +5,15 @@ deny:
   categories:
     - admin
     - write
+  descriptions:
+    - "*ssh*"
+    - "*credentials*"
+    - "*IMPORTANT*"
+    - "*GOD MODE*"
 
 require:
   aguara: clean
   maxTools: 15
+  maxFindings:
+    critical: 0
+    high: 0

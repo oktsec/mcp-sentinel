@@ -2,6 +2,7 @@ import type {
   ToolInfo,
   AnalyzedTool,
   ToolCategory,
+  AguaraFinding,
 } from "./types.js";
 
 const WRITE_HINTS = [
@@ -17,7 +18,23 @@ const ADMIN_HINTS = [
   /\buninstall\b/i, /\breset\b/i, /\bkill\b/i, /\bforce\b/i,
 ];
 
-export function categorizeTool(tool: ToolInfo): ToolCategory {
+// Aguara categories that indicate a tool is dangerous
+const DANGEROUS_CATEGORIES = new Set([
+  "prompt-injection", "indirect-injection", "exfiltration",
+  "credential-leak", "command-execution", "supply-chain",
+  "mcp-attack", "unicode-attack",
+]);
+
+export function categorizeTool(tool: ToolInfo, findings?: AguaraFinding[]): ToolCategory {
+  // If aguara found critical/high findings in dangerous categories, escalate to admin
+  if (findings !== undefined && findings.length > 0) {
+    const hasDangerous = findings.some((f) =>
+      (f.severity === "CRITICAL" || f.severity === "HIGH") &&
+      DANGEROUS_CATEGORIES.has(f.category)
+    );
+    if (hasDangerous) return "admin";
+  }
+
   const text = `${tool.name} ${tool.description}`;
 
   if (ADMIN_HINTS.some((p) => p.test(text))) {
@@ -29,11 +46,15 @@ export function categorizeTool(tool: ToolInfo): ToolCategory {
   return "read";
 }
 
-export function analyzeTools(tools: ToolInfo[]): AnalyzedTool[] {
-  return tools.map((tool) => ({
-    tool,
-    category: categorizeTool(tool),
-  }));
+export function analyzeTools(tools: ToolInfo[], findingsByTool?: Map<string, AguaraFinding[]>): AnalyzedTool[] {
+  return tools.map((tool) => {
+    const toolFindings = findingsByTool?.get(tool.name) ?? [];
+    return {
+      tool,
+      category: categorizeTool(tool, toolFindings),
+      findings: toolFindings,
+    };
+  });
 }
 
 export function summarize(tools: AnalyzedTool[]): { read: number; write: number; admin: number } {

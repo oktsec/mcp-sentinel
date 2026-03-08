@@ -33,6 +33,7 @@ export interface ToolInfo {
 export interface AnalyzedTool {
   tool: ToolInfo;
   category: ToolCategory;
+  findings: AguaraFinding[];
 }
 
 // --- Resources ---
@@ -71,14 +72,22 @@ export interface AguaraFinding {
   severity: string;
   ruleId: string;
   ruleName: string;
+  category: string;
+  description: string;
   matchedText: string;
+  toolName: string;
   line?: number;
+  confidence?: number;
+  score?: number;
+  remediation?: string;
 }
 
 export interface AguaraResult {
   available: boolean;
   findings: AguaraFinding[];
   summary: string;
+  rulesLoaded?: number;
+  durationMs?: number;
 }
 
 // --- Scan result ---
@@ -121,10 +130,13 @@ export interface PolicyRule {
   deny?: {
     categories?: ToolCategory[];
     tools?: string[];
+    descriptions?: string[];
   };
   require?: {
     aguara?: "clean";
     maxTools?: number;
+    maxFindings?: Record<string, number>;
+    capabilities?: ToolCategory[];
   };
   allow?: {
     tools?: string[];
@@ -156,4 +168,6 @@ export interface CliOptions {
   config: boolean;
   failOnFindings: boolean;
   policy: string | false;
+  verbose: boolean;
+  header: string[];
 }

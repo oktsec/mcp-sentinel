@@ -1,6 +1,6 @@
 import type { CliOptions, ServerTarget } from "./types.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.4";
 
 const HELP = `
 mcp-sentinel v${VERSION}
@@ -25,6 +25,8 @@ OPTIONS
   --fail-on-findings   Exit with code 2 if aguara finds security issues (for CI)
   --json               Output results as JSON
   --markdown <file>    Export report as markdown file
+  --verbose            Show full tool descriptions and finding details
+  --header <value>     HTTP header for remote servers (e.g. "Authorization: Bearer xxx")
   --no-color           Disable colored output
   --timeout <ms>       Connection timeout in milliseconds (default: 30000)
   --help, -h           Show this help message
@@ -36,6 +38,8 @@ EXAMPLES
   npx mcp-sentinel http://localhost:3000/mcp
   npx mcp-sentinel http://localhost:3000/sse --transport sse
   npx mcp-sentinel node my-server.js --json
+  npx mcp-sentinel node my-server.js --verbose
+  npx mcp-sentinel http://remote:3000/mcp --header "Authorization: Bearer token"
   npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --- npx @modelcontextprotocol/server-github
   npx mcp-sentinel --config
   npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp --json > baseline.json
@@ -63,6 +67,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
   const noColor = args.includes("--no-color");
   const config = args.includes("--config");
   const failOnFindings = args.includes("--fail-on-findings");
+  const verbose = args.includes("--verbose");
 
   let timeout = 30_000;
   const timeoutIdx = args.indexOf("--timeout");
@@ -125,10 +130,18 @@ export function parseArgs(argv: string[]): CliOptions | null {
     }
   }
 
-  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff", "--policy"]);
+  // Collect --header values (can be repeated)
+  const header: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--header" && i + 1 < args.length) {
+      header.push(args[i + 1]!);
+    }
+  }
+
+  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff", "--policy", "--header"]);
 
   const filteredArgs = args.filter((arg, i) => {
-    if (arg === "--json" || arg === "--no-color" || arg === "--config" || arg === "--fail-on-findings") return false;
+    if (arg === "--json" || arg === "--no-color" || arg === "--config" || arg === "--fail-on-findings" || arg === "--verbose") return false;
     if (FLAG_ARGS.has(arg)) return false;
     if (i > 0 && FLAG_ARGS.has(args[i - 1]!)) return false;
     return true;
@@ -146,7 +159,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings, policy };
+  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings, policy, verbose, header };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {

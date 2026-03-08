@@ -4,7 +4,7 @@ import type {
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities,
 } from "./types.js";
 
-const VERSION = "0.1.4";
+const VERSION = "0.1.5";
 const WIDTH = 64;
 
 const CATEGORY_COLORS = {
@@ -14,10 +14,29 @@ const CATEGORY_COLORS = {
 } as const;
 
 const CATEGORY_ICONS = {
-  read: chalk.green("✔"),
-  write: chalk.yellow("✎"),
-  admin: chalk.red("⚠"),
+  read: chalk.green("\u2714"),
+  write: chalk.yellow("\u270E"),
+  admin: chalk.red("\u26A0"),
 } as const;
+
+const SEV_MAP: Record<string, { label: string; color: (t: string) => string }> = {
+  "4": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "3": { label: "HIGH", color: chalk.red },
+  "2": { label: "MEDIUM", color: chalk.yellow },
+  "1": { label: "LOW", color: chalk.dim },
+  "CRITICAL": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "HIGH": { label: "HIGH", color: chalk.red },
+  "MEDIUM": { label: "MEDIUM", color: chalk.yellow },
+  "LOW": { label: "LOW", color: chalk.dim },
+};
+
+function sevInfo(severity: string): { label: string; color: (t: string) => string } {
+  return SEV_MAP[severity] ?? { label: severity, color: chalk.dim };
+}
+
+export interface FormatOptions {
+  verbose?: boolean;
+}
 
 function sanitize(text: string): string {
   return text
@@ -37,9 +56,9 @@ function truncate(text: string, max: number): string {
 function box(text: string): string {
   const inner = `  ${text}  `;
   const len = stripAnsi(inner).length;
-  const top = `┌${"─".repeat(len)}┐`;
-  const bot = `└${"─".repeat(len)}┘`;
-  return `${chalk.dim(top)}\n${chalk.dim("│")}${inner}${chalk.dim("│")}\n${chalk.dim(bot)}`;
+  const top = `\u250C${"\u2500".repeat(len)}\u2510`;
+  const bot = `\u2514${"\u2500".repeat(len)}\u2518`;
+  return `${chalk.dim(top)}\n${chalk.dim("\u2502")}${inner}${chalk.dim("\u2502")}\n${chalk.dim(bot)}`;
 }
 
 function stripAnsi(str: string): string {
@@ -55,11 +74,21 @@ function rightAlign(left: string, right: string, width: number): string {
 }
 
 function divider(): string {
-  return chalk.dim(`  ${"─".repeat(WIDTH - 4)}`);
+  return chalk.dim(`  ${"\u2500".repeat(WIDTH - 4)}`);
 }
 
-function formatToolBlock(analyzed: AnalyzedTool): string[] {
-  const { tool, category } = analyzed;
+function sortToolsByRisk(tools: AnalyzedTool[]): AnalyzedTool[] {
+  const order = { admin: 0, write: 1, read: 2 };
+  return [...tools].sort((a, b) => {
+    const catDiff = order[a.category] - order[b.category];
+    if (catDiff !== 0) return catDiff;
+    // Within same category, tools with findings first
+    return b.findings.length - a.findings.length;
+  });
+}
+
+function formatToolBlock(analyzed: AnalyzedTool, verbose: boolean): string[] {
+  const { tool, category, findings } = analyzed;
   const lines: string[] = [];
 
   const icon = CATEGORY_ICONS[category];
@@ -70,14 +99,46 @@ function formatToolBlock(analyzed: AnalyzedTool): string[] {
   lines.push(rightAlign(`  ${icon} ${name}`, tag, WIDTH));
 
   if (tool.description.length > 0) {
-    lines.push(`    ${chalk.dim(truncate(tool.description, WIDTH - 4))}`);
+    if (verbose) {
+      // Show full description in verbose mode, wrapped
+      const clean = sanitize(tool.description);
+      const maxLine = WIDTH - 8;
+      let remaining = clean;
+      while (remaining.length > 0) {
+        if (remaining.length <= maxLine) {
+          lines.push(`    ${chalk.dim(remaining)}`);
+          break;
+        }
+        const cut = remaining.lastIndexOf(" ", maxLine);
+        const breakAt = cut > maxLine * 0.3 ? cut : maxLine;
+        lines.push(`    ${chalk.dim(remaining.slice(0, breakAt))}`);
+        remaining = remaining.slice(breakAt).trimStart();
+      }
+    } else {
+      lines.push(`    ${chalk.dim(truncate(tool.description, WIDTH - 4))}`);
+    }
   }
 
   if (tool.parameters.length > 0) {
     const params = tool.parameters.map((p) =>
       p.required ? chalk.white(`${p.name}${chalk.red("*")}`) : chalk.dim(p.name)
     );
-    lines.push(`    ${params.join(chalk.dim(" · "))}`);
+    lines.push(`    ${params.join(chalk.dim(" \u00B7 "))}`);
+  }
+
+  // Show per-tool findings inline
+  if (findings.length > 0) {
+    const findingCounts = formatFindingSummary(findings);
+    lines.push(`    ${chalk.dim("\u2514\u2500")} ${findingCounts}`);
+    if (verbose) {
+      for (const f of findings) {
+        const { label, color } = sevInfo(f.severity);
+        lines.push(`       ${color(label)} ${chalk.dim(f.ruleId)} ${chalk.dim(f.ruleName)}`);
+        if (f.remediation !== undefined) {
+          lines.push(`       ${chalk.dim("\u2192 " + truncate(f.remediation, WIDTH - 12))}`);
+        }
+      }
+    }
   }
 
   return lines;
@@ -107,30 +168,25 @@ function formatResourceTemplate(r: ResourceTemplateInfo): string {
 function formatPrompt(p: PromptInfo): string {
   const desc = p.description.length > 0 ? `\n    ${chalk.dim(truncate(p.description, WIDTH - 4))}` : "";
   const args = p.arguments.length > 0
-    ? `\n    ${p.arguments.map((a) => a.required ? chalk.white(`${a.name}${chalk.red("*")}`) : chalk.dim(a.name)).join(chalk.dim(" · "))}`
+    ? `\n    ${p.arguments.map((a) => a.required ? chalk.white(`${a.name}${chalk.red("*")}`) : chalk.dim(a.name)).join(chalk.dim(" \u00B7 "))}`
     : "";
   return `  ${chalk.bold(p.name)}${desc}${args}`;
 }
 
-const SEV_MAP: Record<string, { label: string; color: (t: string) => string }> = {
-  "4": { label: "CRITICAL", color: chalk.bgRed.white.bold },
-  "3": { label: "HIGH", color: chalk.red },
-  "2": { label: "MEDIUM", color: chalk.yellow },
-  "1": { label: "LOW", color: chalk.dim },
-  "CRITICAL": { label: "CRITICAL", color: chalk.bgRed.white.bold },
-  "HIGH": { label: "HIGH", color: chalk.red },
-  "MEDIUM": { label: "MEDIUM", color: chalk.yellow },
-  "LOW": { label: "LOW", color: chalk.dim },
-};
-
-function sevInfo(severity: string): { label: string; color: (t: string) => string } {
-  return SEV_MAP[severity] ?? { label: severity, color: chalk.dim };
-}
-
-function formatFinding(finding: AguaraFinding): string {
+function formatFinding(finding: AguaraFinding, verbose: boolean): string {
   const { label, color } = sevInfo(finding.severity);
   const sev = color(label.padEnd(8));
-  return `    ${sev}  ${chalk.white(finding.ruleId)} ${chalk.dim(finding.ruleName)}`;
+  const tool = finding.toolName.length > 0 ? chalk.dim(` [${finding.toolName}]`) : "";
+  const line = `    ${sev}  ${chalk.white(finding.ruleId)} ${chalk.dim(finding.ruleName)}${tool}`;
+  if (!verbose) return line;
+  const details: string[] = [line];
+  if (finding.description.length > 0) {
+    details.push(`             ${chalk.dim(truncate(finding.description, WIDTH - 14))}`);
+  }
+  if (finding.remediation !== undefined) {
+    details.push(`             ${chalk.dim("\u2192 " + truncate(finding.remediation, WIDTH - 16))}`);
+  }
+  return details.join("\n");
 }
 
 function formatFindingSummary(findings: AguaraFinding[]): string {
@@ -144,7 +200,7 @@ function formatFindingSummary(findings: AguaraFinding[]): string {
   if (counts["HIGH"] !== undefined) parts.push(chalk.red(`${counts["HIGH"]} high`));
   if (counts["MEDIUM"] !== undefined) parts.push(chalk.yellow(`${counts["MEDIUM"]} medium`));
   if (counts["LOW"] !== undefined) parts.push(chalk.dim(`${counts["LOW"]} low`));
-  return parts.join(chalk.dim(" · "));
+  return parts.join(chalk.dim(" \u00B7 "));
 }
 
 function sectionHeader(icon: string, title: string, count?: number): string {
@@ -152,8 +208,9 @@ function sectionHeader(icon: string, title: string, count?: number): string {
   return `${icon} ${chalk.bold(title)}${countStr}`;
 }
 
-export function formatOutput(result: ScanResult): string {
+export function formatOutput(result: ScanResult, options: FormatOptions = {}): string {
   const lines: string[] = [];
+  const verbose = options.verbose === true;
   const { server, capabilities, tools, toolSummary, resources, resourceTemplates, prompts, instructions, aguara, scanDuration } = result;
 
   // Header
@@ -164,15 +221,19 @@ export function formatOutput(result: ScanResult): string {
   // Server info
   lines.push(`  ${chalk.dim("Server")}        ${chalk.bold(server.name)} ${chalk.dim(`v${server.version}`)}`);
   lines.push(`  ${chalk.dim("Capabilities")}  ${formatCapabilities(capabilities)}`);
+  if (aguara.available && aguara.rulesLoaded !== undefined) {
+    lines.push(`  ${chalk.dim("Aguara")}        ${chalk.dim(`${aguara.rulesLoaded} rules loaded`)}`);
+  }
   lines.push("");
 
-  // Tools
+  // Tools (sorted by risk: admin first, then write, then read)
   if (tools.length > 0) {
-    const summary = `${chalk.green(`${toolSummary.read} read`)} ${chalk.dim("·")} ${chalk.yellow(`${toolSummary.write} write`)} ${chalk.dim("·")} ${chalk.red(`${toolSummary.admin} admin`)}`;
-    lines.push(`  ${sectionHeader("🔧", "Tools", tools.length)}    ${summary}`);
+    const sorted = sortToolsByRisk(tools);
+    const summary = `${chalk.green(`${toolSummary.read} read`)} ${chalk.dim("\u00B7")} ${chalk.yellow(`${toolSummary.write} write`)} ${chalk.dim("\u00B7")} ${chalk.red(`${toolSummary.admin} admin`)}`;
+    lines.push(`  ${sectionHeader("\u{1F527}", "Tools", tools.length)}    ${summary}`);
     lines.push("");
-    for (const tool of tools) {
-      lines.push(...formatToolBlock(tool));
+    for (const tool of sorted) {
+      lines.push(...formatToolBlock(tool, verbose));
       lines.push("");
     }
   }
@@ -180,7 +241,7 @@ export function formatOutput(result: ScanResult): string {
   // Resources
   if (resources.length > 0 || resourceTemplates.length > 0) {
     const total = resources.length + resourceTemplates.length;
-    lines.push(`  ${sectionHeader("📁", "Resources", total)}`);
+    lines.push(`  ${sectionHeader("\u{1F4C1}", "Resources", total)}`);
     lines.push("");
     for (const r of resources) {
       lines.push(formatResource(r));
@@ -194,7 +255,7 @@ export function formatOutput(result: ScanResult): string {
 
   // Prompts
   if (prompts.length > 0) {
-    lines.push(`  ${sectionHeader("💬", "Prompts", prompts.length)}`);
+    lines.push(`  ${sectionHeader("\u{1F4AC}", "Prompts", prompts.length)}`);
     lines.push("");
     for (const p of prompts) {
       lines.push(formatPrompt(p));
@@ -204,9 +265,25 @@ export function formatOutput(result: ScanResult): string {
 
   // Instructions
   if (instructions !== null) {
-    lines.push(`  ${sectionHeader("📝", "Server Instructions")}`);
+    lines.push(`  ${sectionHeader("\u{1F4DD}", "Server Instructions")}`);
     lines.push("");
-    lines.push(`    ${chalk.dim(truncate(instructions, 200))}`);
+    if (verbose) {
+      const clean = sanitize(instructions);
+      const maxLine = WIDTH - 8;
+      let remaining = clean;
+      while (remaining.length > 0) {
+        if (remaining.length <= maxLine) {
+          lines.push(`    ${chalk.dim(remaining)}`);
+          break;
+        }
+        const cut = remaining.lastIndexOf(" ", maxLine);
+        const breakAt = cut > maxLine * 0.3 ? cut : maxLine;
+        lines.push(`    ${chalk.dim(remaining.slice(0, breakAt))}`);
+        remaining = remaining.slice(breakAt).trimStart();
+      }
+    } else {
+      lines.push(`    ${chalk.dim(truncate(instructions, 200))}`);
+    }
     lines.push("");
   }
 
@@ -215,19 +292,19 @@ export function formatOutput(result: ScanResult): string {
     lines.push(divider());
     lines.push("");
     if (aguara.findings.length > 0) {
-      lines.push(`  ${sectionHeader("🛡️ ", "Security Findings", aguara.findings.length)}  ${formatFindingSummary(aguara.findings)}`);
+      lines.push(`  ${sectionHeader("\u{1F6E1}\uFE0F ", "Security Findings", aguara.findings.length)}  ${formatFindingSummary(aguara.findings)}`);
       lines.push("");
       for (const finding of aguara.findings) {
-        lines.push(formatFinding(finding));
+        lines.push(formatFinding(finding, verbose));
       }
     } else {
-      lines.push(`  🛡️  ${chalk.green.bold("No security findings")} ${chalk.dim("· aguara scan clean")}`);
+      lines.push(`  \u{1F6E1}\uFE0F  ${chalk.green.bold("No security findings")} ${chalk.dim("\u00B7 aguara scan clean")}`);
     }
     lines.push("");
   } else {
     lines.push(divider());
     lines.push("");
-    lines.push(`  🛡️  ${chalk.dim("Install")} ${chalk.cyan("aguara")} ${chalk.dim("for deep security analysis")}`);
+    lines.push(`  \u{1F6E1}\uFE0F  ${chalk.dim("Install")} ${chalk.cyan("aguara")} ${chalk.dim("for deep security analysis")}`);
     lines.push(`     ${chalk.cyan("https://github.com/garagon/aguara")}`);
     lines.push("");
   }
@@ -235,7 +312,8 @@ export function formatOutput(result: ScanResult): string {
   // Footer
   lines.push(divider());
   lines.push("");
-  lines.push(`  ${chalk.dim(`Scanned in ${scanDuration}ms`)}  ${chalk.dim("·")}  ${chalk.dim("Deep scan:")} ${chalk.cyan.underline("https://aguarascan.com")}`);
+  const aguaraDuration = aguara.durationMs !== undefined ? chalk.dim(` (aguara ${aguara.durationMs}ms)`) : "";
+  lines.push(`  ${chalk.dim(`Scanned in ${scanDuration}ms`)}${aguaraDuration}  ${chalk.dim("\u00B7")}  ${chalk.dim("Deep scan:")} ${chalk.cyan.underline("https://aguarascan.com")}`);
   lines.push("");
 
   return lines.join("\n");
@@ -249,7 +327,7 @@ export function formatDiff(diff: DiffResult): string {
   const lines: string[] = [];
 
   lines.push("");
-  lines.push(box(`MCP Sentinel Diff ${chalk.dim("·")} ${chalk.bold(diff.server)}`));
+  lines.push(box(`MCP Sentinel Diff ${chalk.dim("\u00B7")} ${chalk.bold(diff.server)}`));
   lines.push("");
 
   if (diff.entries.length === 0) {
@@ -279,18 +357,18 @@ export function formatPolicyResult(result: PolicyResult, serverName: string): st
   const lines: string[] = [];
 
   if (result.passed) {
-    lines.push(`  ${chalk.green("✔")} ${chalk.bold(serverName)} ${chalk.green("policy passed")}`);
+    lines.push(`  ${chalk.green("\u2714")} ${chalk.bold(serverName)} ${chalk.green("policy passed")}`);
     return lines.join("\n");
   }
 
-  lines.push(`  ${chalk.red("✖")} ${chalk.bold(serverName)} ${chalk.red("policy FAILED")} ${chalk.dim(`(${result.violations.length} violation${result.violations.length === 1 ? "" : "s"})`)}`);
+  lines.push(`  ${chalk.red("\u2716")} ${chalk.bold(serverName)} ${chalk.red("policy FAILED")} ${chalk.dim(`(${result.violations.length} violation${result.violations.length === 1 ? "" : "s"})`)}`);
   lines.push("");
   for (const v of result.violations) {
-    lines.push(`    ${chalk.red("→")} ${chalk.dim(`[${v.rule}]`)} ${v.message}`);
+    lines.push(`    ${chalk.red("\u2192")} ${chalk.dim(`[${v.rule}]`)} ${v.message}`);
   }
   return lines.join("\n");
 }
 
 export function formatError(message: string): string {
-  return `\n${chalk.red("✖")} ${chalk.red.bold("Error:")} ${message}\n`;
+  return `\n${chalk.red("\u2716")} ${chalk.red.bold("Error:")} ${message}\n`;
 }

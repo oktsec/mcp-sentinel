@@ -37,8 +37,8 @@ describe("formatOutput", () => {
   it("shows tool summary breakdown", () => {
     const output = formatOutput(makeScanResult({
       tools: [
-        { tool: { name: "a", description: "A", parameters: [] }, category: "read" },
-        { tool: { name: "b", description: "B", parameters: [] }, category: "write" },
+        { tool: { name: "a", description: "A", parameters: [] }, category: "read", findings: [] },
+        { tool: { name: "b", description: "B", parameters: [] }, category: "write", findings: [] },
       ],
       toolSummary: { read: 1, write: 1, admin: 0 },
     }));
@@ -58,6 +58,7 @@ describe("formatOutput", () => {
           ],
         },
         category: "write",
+        findings: [],
       }],
     }));
     expect(output).toContain("title");

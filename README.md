@@ -141,8 +141,10 @@ npx mcp-sentinel --markdown report.md npx @modelcontextprotocol/server-filesyste
 |------|-------------|---------|
 | `deny.categories` | Block tools by category | `[admin]`, `[admin, write]` |
 | `deny.tools` | Block by name or glob | `["delete_*", "run_command"]` |
+| `deny.descriptions` | Block tools by description content | `["*ssh*", "*IMPORTANT*"]` |
 | `require.maxTools` | Max number of tools allowed | `20` |
 | `require.aguara` | Require zero security findings | `clean` |
+| `require.maxFindings` | Limit findings by severity | `{ critical: 0, high: 0 }` |
 | `allow.tools` | Exceptions to deny rules | `["execute_query"]` |
 
 ### Starter Policies
@@ -177,6 +179,8 @@ Once installed, MCP Sentinel auto-detects it and runs the analysis. Add `require
 | `--transport <type>` | Force transport: `stdio`, `sse`, `streamable-http` |
 | `--json` | JSON output |
 | `--markdown <file>` | Export Markdown report |
+| `--verbose` | Show full descriptions, finding details, and remediation |
+| `--header <value>` | HTTP header for remote servers (repeatable) |
 | `--fail-on-findings` | Exit code 2 if aguara finds issues |
 | `--no-color` | Disable colors |
 | `--timeout <ms>` | Connection timeout (default: 30000) |
