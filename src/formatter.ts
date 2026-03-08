@@ -20,11 +20,11 @@ const CATEGORY_ICONS = {
 } as const;
 
 const SEV_MAP: Record<string, { label: string; color: (t: string) => string }> = {
-  "4": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "4": { label: "CRITICAL", color: chalk.red.bold },
   "3": { label: "HIGH", color: chalk.red },
   "2": { label: "MEDIUM", color: chalk.yellow },
   "1": { label: "LOW", color: chalk.dim },
-  "CRITICAL": { label: "CRITICAL", color: chalk.bgRed.white.bold },
+  "CRITICAL": { label: "CRITICAL", color: chalk.red.bold },
   "HIGH": { label: "HIGH", color: chalk.red },
   "MEDIUM": { label: "MEDIUM", color: chalk.yellow },
   "LOW": { label: "LOW", color: chalk.dim },
@@ -196,7 +196,7 @@ function formatFindingSummary(findings: AguaraFinding[]): string {
     counts[label] = (counts[label] ?? 0) + 1;
   }
   const parts: string[] = [];
-  if (counts["CRITICAL"] !== undefined) parts.push(chalk.bgRed.white.bold(` ${counts["CRITICAL"]} critical `));
+  if (counts["CRITICAL"] !== undefined) parts.push(chalk.red.bold(`${counts["CRITICAL"]} critical`));
   if (counts["HIGH"] !== undefined) parts.push(chalk.red(`${counts["HIGH"]} high`));
   if (counts["MEDIUM"] !== undefined) parts.push(chalk.yellow(`${counts["MEDIUM"]} medium`));
   if (counts["LOW"] !== undefined) parts.push(chalk.dim(`${counts["LOW"]} low`));
