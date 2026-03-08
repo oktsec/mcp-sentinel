@@ -47,6 +47,7 @@ describe("parseArgs", () => {
       failOnFindings: false,
       policy: false,
       verbose: false,
+      sarif: false,
       header: [],
     });
   });
@@ -174,6 +175,71 @@ describe("parseArgs", () => {
       { type: "stdio", command: "npx", args: ["@mcp/server-a"] },
       { type: "streamable-http", url: "http://localhost:3000/mcp" },
     ]);
+  });
+
+  // --diff
+  it("parses --diff flag with file path", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--diff", "baseline.json", "npx", "@mcp/server"]);
+    expect(result?.diff).toBe("baseline.json");
+  });
+
+  it("exits on --diff without file path", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-sentinel", "--diff", "--json", "npx", "@mcp/server"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // --policy
+  it("parses --policy with explicit file path", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--policy", "my-policy.yml", "npx", "@mcp/server"]);
+    expect(result?.policy).toBe("my-policy.yml");
+  });
+
+  it("parses --policy without file as auto-detect", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--policy", "--json", "npx", "@mcp/server"]);
+    expect(result?.policy).toBe("auto");
+  });
+
+  // --fail-on-findings
+  it("parses --fail-on-findings flag", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--fail-on-findings", "npx", "@mcp/server"]);
+    expect(result?.failOnFindings).toBe(true);
+  });
+
+  // --verbose
+  it("parses --verbose flag", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--verbose", "npx", "@mcp/server"]);
+    expect(result?.verbose).toBe(true);
+  });
+
+  // --sarif
+  it("parses --sarif flag with file path", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--sarif", "report.sarif", "npx", "@mcp/server"]);
+    expect(result?.sarif).toBe("report.sarif");
+  });
+
+  it("exits on --sarif without file path", () => {
+    expect(() => {
+      parseArgs(["node", "mcp-sentinel", "--sarif", "--json", "npx", "@mcp/server"]);
+    }).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // --header
+  it("parses single --header flag", () => {
+    const result = parseArgs(["node", "mcp-sentinel", "--header", "Authorization: Bearer xxx", "http://localhost:3000/mcp"]);
+    expect(result?.header).toEqual(["Authorization: Bearer xxx"]);
+  });
+
+  it("parses multiple --header flags", () => {
+    const result = parseArgs([
+      "node", "mcp-sentinel",
+      "--header", "Authorization: Bearer xxx",
+      "--header", "X-Custom: value",
+      "http://localhost:3000/mcp",
+    ]);
+    expect(result?.header).toEqual(["Authorization: Bearer xxx", "X-Custom: value"]);
   });
 
   // --config

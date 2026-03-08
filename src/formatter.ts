@@ -5,7 +5,7 @@ import type {
 } from "./types.js";
 
 const VERSION = "0.1.5";
-const WIDTH = 64;
+const WIDTH = 70;
 
 const CATEGORY_COLORS = {
   read: chalk.green,
@@ -20,12 +20,12 @@ const CATEGORY_ICONS = {
 } as const;
 
 const SEV_MAP: Record<string, { label: string; color: (t: string) => string }> = {
-  "4": { label: "CRITICAL", color: chalk.bgRed.white.bold },
-  "3": { label: "HIGH", color: chalk.red },
+  "4": { label: "CRITICAL", color: chalk.red.bold },
+  "3": { label: "HIGH", color: chalk.magenta },
   "2": { label: "MEDIUM", color: chalk.yellow },
   "1": { label: "LOW", color: chalk.dim },
-  "CRITICAL": { label: "CRITICAL", color: chalk.bgRed.white.bold },
-  "HIGH": { label: "HIGH", color: chalk.red },
+  "CRITICAL": { label: "CRITICAL", color: chalk.red.bold },
+  "HIGH": { label: "HIGH", color: chalk.magenta },
   "MEDIUM": { label: "MEDIUM", color: chalk.yellow },
   "LOW": { label: "LOW", color: chalk.dim },
 };
@@ -82,9 +82,24 @@ function sortToolsByRisk(tools: AnalyzedTool[]): AnalyzedTool[] {
   return [...tools].sort((a, b) => {
     const catDiff = order[a.category] - order[b.category];
     if (catDiff !== 0) return catDiff;
-    // Within same category, tools with findings first
     return b.findings.length - a.findings.length;
   });
+}
+
+function wrapText(text: string, indent: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxWidth) {
+      lines.push(`${indent}${remaining}`);
+      break;
+    }
+    const cut = remaining.lastIndexOf(" ", maxWidth);
+    const breakAt = cut > maxWidth * 0.3 ? cut : maxWidth;
+    lines.push(`${indent}${remaining.slice(0, breakAt)}`);
+    remaining = remaining.slice(breakAt).trimStart();
+  }
+  return lines;
 }
 
 function formatToolBlock(analyzed: AnalyzedTool, verbose: boolean): string[] {
@@ -100,22 +115,12 @@ function formatToolBlock(analyzed: AnalyzedTool, verbose: boolean): string[] {
 
   if (tool.description.length > 0) {
     if (verbose) {
-      // Show full description in verbose mode, wrapped
       const clean = sanitize(tool.description);
-      const maxLine = WIDTH - 8;
-      let remaining = clean;
-      while (remaining.length > 0) {
-        if (remaining.length <= maxLine) {
-          lines.push(`    ${chalk.dim(remaining)}`);
-          break;
-        }
-        const cut = remaining.lastIndexOf(" ", maxLine);
-        const breakAt = cut > maxLine * 0.3 ? cut : maxLine;
-        lines.push(`    ${chalk.dim(remaining.slice(0, breakAt))}`);
-        remaining = remaining.slice(breakAt).trimStart();
+      for (const l of wrapText(clean, "    ", WIDTH - 8)) {
+        lines.push(chalk.dim(l));
       }
     } else {
-      lines.push(`    ${chalk.dim(truncate(tool.description, WIDTH - 4))}`);
+      lines.push(`    ${chalk.dim(truncate(tool.description, WIDTH - 8))}`);
     }
   }
 
@@ -155,38 +160,48 @@ function formatCapabilities(caps: ServerCapabilities): string {
 
 function formatResource(r: ResourceInfo): string {
   const mime = r.mimeType.length > 0 ? chalk.dim(` [${r.mimeType}]`) : "";
-  const desc = r.description.length > 0 ? `\n    ${chalk.dim(truncate(r.description, WIDTH - 4))}` : "";
+  const desc = r.description.length > 0 ? `\n    ${chalk.dim(truncate(r.description, WIDTH - 8))}` : "";
   return `  ${chalk.cyan(r.uri)}${mime}${desc}`;
 }
 
 function formatResourceTemplate(r: ResourceTemplateInfo): string {
   const mime = r.mimeType.length > 0 ? chalk.dim(` [${r.mimeType}]`) : "";
-  const desc = r.description.length > 0 ? `\n    ${chalk.dim(truncate(r.description, WIDTH - 4))}` : "";
+  const desc = r.description.length > 0 ? `\n    ${chalk.dim(truncate(r.description, WIDTH - 8))}` : "";
   return `  ${chalk.cyan(r.uriTemplate)}${mime}${desc}`;
 }
 
 function formatPrompt(p: PromptInfo): string {
-  const desc = p.description.length > 0 ? `\n    ${chalk.dim(truncate(p.description, WIDTH - 4))}` : "";
+  const desc = p.description.length > 0 ? `\n    ${chalk.dim(truncate(p.description, WIDTH - 8))}` : "";
   const args = p.arguments.length > 0
     ? `\n    ${p.arguments.map((a) => a.required ? chalk.white(`${a.name}${chalk.red("*")}`) : chalk.dim(a.name)).join(chalk.dim(" \u00B7 "))}`
     : "";
   return `  ${chalk.bold(p.name)}${desc}${args}`;
 }
 
-function formatFinding(finding: AguaraFinding, verbose: boolean): string {
+function formatFinding(finding: AguaraFinding, verbose: boolean): string[] {
   const { label, color } = sevInfo(finding.severity);
   const sev = color(label.padEnd(8));
-  const tool = finding.toolName.length > 0 ? chalk.dim(` [${finding.toolName}]`) : "";
-  const line = `    ${sev}  ${chalk.white(finding.ruleId)} ${chalk.dim(finding.ruleName)}${tool}`;
-  if (!verbose) return line;
-  const details: string[] = [line];
-  if (finding.description.length > 0) {
-    details.push(`             ${chalk.dim(truncate(finding.description, WIDTH - 14))}`);
+  const ruleId = chalk.white(finding.ruleId);
+  const tool = finding.toolName.length > 0 ? chalk.cyan(finding.toolName) : "";
+
+  const lines: string[] = [];
+
+  // Line 1: severity + rule ID + tool name
+  lines.push(`    ${sev}  ${ruleId}  ${tool}`);
+
+  // Line 2: rule name (indented under rule ID, truncated)
+  lines.push(`                ${chalk.dim(truncate(finding.ruleName, WIDTH - 16))}`);
+
+  if (verbose) {
+    if (finding.description.length > 0 && finding.description !== finding.ruleName) {
+      lines.push(`                ${chalk.dim(truncate(finding.description, WIDTH - 16))}`);
+    }
+    if (finding.remediation !== undefined) {
+      lines.push(`                ${chalk.dim("\u2192 " + truncate(finding.remediation, WIDTH - 18))}`);
+    }
   }
-  if (finding.remediation !== undefined) {
-    details.push(`             ${chalk.dim("\u2192 " + truncate(finding.remediation, WIDTH - 16))}`);
-  }
-  return details.join("\n");
+
+  return lines;
 }
 
 function formatFindingSummary(findings: AguaraFinding[]): string {
@@ -196,8 +211,8 @@ function formatFindingSummary(findings: AguaraFinding[]): string {
     counts[label] = (counts[label] ?? 0) + 1;
   }
   const parts: string[] = [];
-  if (counts["CRITICAL"] !== undefined) parts.push(chalk.bgRed.white.bold(` ${counts["CRITICAL"]} critical `));
-  if (counts["HIGH"] !== undefined) parts.push(chalk.red(`${counts["HIGH"]} high`));
+  if (counts["CRITICAL"] !== undefined) parts.push(chalk.red.bold(`${counts["CRITICAL"]} critical`));
+  if (counts["HIGH"] !== undefined) parts.push(chalk.magenta(`${counts["HIGH"]} high`));
   if (counts["MEDIUM"] !== undefined) parts.push(chalk.yellow(`${counts["MEDIUM"]} medium`));
   if (counts["LOW"] !== undefined) parts.push(chalk.dim(`${counts["LOW"]} low`));
   return parts.join(chalk.dim(" \u00B7 "));
@@ -269,17 +284,8 @@ export function formatOutput(result: ScanResult, options: FormatOptions = {}): s
     lines.push("");
     if (verbose) {
       const clean = sanitize(instructions);
-      const maxLine = WIDTH - 8;
-      let remaining = clean;
-      while (remaining.length > 0) {
-        if (remaining.length <= maxLine) {
-          lines.push(`    ${chalk.dim(remaining)}`);
-          break;
-        }
-        const cut = remaining.lastIndexOf(" ", maxLine);
-        const breakAt = cut > maxLine * 0.3 ? cut : maxLine;
-        lines.push(`    ${chalk.dim(remaining.slice(0, breakAt))}`);
-        remaining = remaining.slice(breakAt).trimStart();
+      for (const l of wrapText(clean, "    ", WIDTH - 8)) {
+        lines.push(chalk.dim(l));
       }
     } else {
       lines.push(`    ${chalk.dim(truncate(instructions, 200))}`);
@@ -295,7 +301,7 @@ export function formatOutput(result: ScanResult, options: FormatOptions = {}): s
       lines.push(`  ${sectionHeader("\u{1F6E1}\uFE0F ", "Security Findings", aguara.findings.length)}  ${formatFindingSummary(aguara.findings)}`);
       lines.push("");
       for (const finding of aguara.findings) {
-        lines.push(formatFinding(finding, verbose));
+        lines.push(...formatFinding(finding, verbose));
       }
     } else {
       lines.push(`  \u{1F6E1}\uFE0F  ${chalk.green.bold("No security findings")} ${chalk.dim("\u00B7 aguara scan clean")}`);

@@ -26,6 +26,7 @@ OPTIONS
   --json               Output results as JSON
   --markdown <file>    Export report as markdown file
   --verbose            Show full tool descriptions and finding details
+  --sarif <file>       Export SARIF report for GitHub Code Scanning
   --header <value>     HTTP header for remote servers (e.g. "Authorization: Bearer xxx")
   --no-color           Disable colored output
   --timeout <ms>       Connection timeout in milliseconds (default: 30000)
@@ -130,6 +131,17 @@ export function parseArgs(argv: string[]): CliOptions | null {
     }
   }
 
+  let sarif: string | false = false;
+  const sarifIdx = args.indexOf("--sarif");
+  if (sarifIdx !== -1) {
+    const sarifVal = args[sarifIdx + 1];
+    if (sarifVal === undefined || sarifVal.startsWith("--")) {
+      console.error("Error: --sarif requires a file path");
+      process.exit(1);
+    }
+    sarif = sarifVal;
+  }
+
   // Collect --header values (can be repeated)
   const header: string[] = [];
   for (let i = 0; i < args.length; i++) {
@@ -138,7 +150,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     }
   }
 
-  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff", "--policy", "--header"]);
+  const FLAG_ARGS = new Set(["--timeout", "--markdown", "--transport", "--diff", "--policy", "--header", "--sarif"]);
 
   const filteredArgs = args.filter((arg, i) => {
     if (arg === "--json" || arg === "--no-color" || arg === "--config" || arg === "--fail-on-findings" || arg === "--verbose") return false;
@@ -159,7 +171,7 @@ export function parseArgs(argv: string[]): CliOptions | null {
     process.exit(1);
   }
 
-  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings, policy, verbose, header };
+  return { targets, json, markdown, noColor, timeout, diff, config, failOnFindings, policy, verbose, sarif, header };
 }
 
 function parseTargets(args: string[], transportOverride?: "stdio" | "sse" | "streamable-http"): ServerTarget[] {

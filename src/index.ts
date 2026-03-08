@@ -10,6 +10,7 @@ import { analyzeTools, summarize } from "./analyzer.js";
 import { scanWithAguara } from "./aguara.js";
 import { formatOutput, formatJson, formatDiff, formatPolicyResult, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
+import { formatSarif } from "./sarif.js";
 import { diffScans } from "./diff.js";
 import { discoverServers } from "./config.js";
 import { loadPolicy, findPolicy, evaluatePolicy } from "./policy.js";
@@ -22,9 +23,9 @@ function targetLabel(target: ServerTarget): string {
   return target.url;
 }
 
-async function scanServer(target: ServerTarget, timeout: number): Promise<ScanResult> {
+async function scanServer(target: ServerTarget, timeout: number, headers: string[] = []): Promise<ScanResult> {
   const startTime = Date.now();
-  const connection = await connectToServer(target, timeout);
+  const connection = await connectToServer(target, timeout, headers);
 
   try {
     const server = getServerInfo(connection.client);
@@ -104,7 +105,7 @@ async function main(): Promise<void> {
 
   for (const target of options.targets) {
     try {
-      const result = await scanServer(target, options.timeout);
+      const result = await scanServer(target, options.timeout, options.header);
       results.push(result);
 
       if (!options.json && options.diff === false) {
@@ -145,6 +146,12 @@ async function main(): Promise<void> {
     const md = formatMarkdown(results);
     await writeFile(options.markdown, md, "utf-8");
     console.log(`Report saved to ${options.markdown}`);
+  }
+
+  if (options.sarif !== false) {
+    const sarifOutput = formatSarif(results);
+    await writeFile(options.sarif, sarifOutput, "utf-8");
+    console.log(`SARIF report saved to ${options.sarif}`);
   }
 
   // Policy enforcement
