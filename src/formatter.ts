@@ -4,7 +4,7 @@ import type {
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities, RiskScore,
 } from "./types.js";
 
-const VERSION = "0.1.5";
+const VERSION = "0.2.0";
 const WIDTH = 70;
 
 const CATEGORY_COLORS = {
