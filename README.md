@@ -5,10 +5,14 @@
   </p>
   <p align="center">
     <a href="https://www.npmjs.com/package/mcp-sentinel"><img src="https://img.shields.io/npm/v/mcp-sentinel.svg" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/mcp-sentinel"><img src="https://img.shields.io/npm/dm/mcp-sentinel.svg" alt="npm downloads"></a>
     <a href="https://github.com/oktsec/mcp-sentinel/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-sentinel.svg" alt="license"></a>
     <a href="https://nodejs.org"><img src="https://img.shields.io/node/v/mcp-sentinel.svg" alt="node version"></a>
+    <a href="https://github.com/oktsec/mcp-sentinel"><img src="https://img.shields.io/github/stars/oktsec/mcp-sentinel?style=social" alt="GitHub stars"></a>
   </p>
 </p>
+
+> **v0.2.0** -- Risk scoring (A-F), SARIF output, per-tool security analysis, verbose mode, HTTP header support
 
 ---
 
@@ -19,6 +23,18 @@ You add an MCP server to Claude Desktop, Cursor, or your agent framework. Now th
 **You're trusting code you haven't reviewed.**
 
 MCP Sentinel connects to any MCP server, shows you every tool it exposes, assigns a risk score, and lets you define security policies that block dangerous ones automatically.
+
+### Features
+
+- **Risk Scoring** -- A-F grade for every server based on tool risk, security findings, and attack surface
+- **Policy Engine** -- YAML-based deny/require/allow rules with glob patterns and auto-detection
+- **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (177 rules: prompt injection, exfiltration, credential leaks)
+- **Smart Categorization** -- Tools auto-escalate from "read" to "admin" when critical findings are detected
+- **Multi-Transport** -- stdio, SSE, and Streamable HTTP with custom header support
+- **Config Discovery** -- Auto-scan servers from Claude Desktop, Cursor, Windsurf, VS Code, Zed
+- **CI/CD Ready** -- SARIF output for GitHub Code Scanning, exit codes for policy violations
+- **Drift Detection** -- Save baselines and detect added/removed/changed tools over time
+- **Multiple Exports** -- Terminal, JSON, Markdown, SARIF
 
 ## Quick Start
 
