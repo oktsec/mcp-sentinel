@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { formatOutput, formatJson, formatError } from "../formatter.js";
-import type { ScanResult } from "../types.js";
+import { formatOutput, formatJson, formatError, formatDiff, formatPolicyResult } from "../formatter.js";
+import type { ScanResult, DiffResult, PolicyResult, AguaraFinding } from "../types.js";
 
 function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
   return {
@@ -120,6 +120,142 @@ describe("formatJson", () => {
     const parsed = JSON.parse(formatJson([makeScanResult(), makeScanResult()])) as unknown[];
     expect(Array.isArray(parsed)).toBe(true);
     expect(parsed).toHaveLength(2);
+  });
+});
+
+describe("formatOutput verbose mode", () => {
+  it("shows full descriptions in verbose mode", () => {
+    const longDesc = "This is a very long tool description that would normally be truncated but in verbose mode should be shown in full";
+    const output = formatOutput(makeScanResult({
+      tools: [{
+        tool: { name: "test_tool", description: longDesc, parameters: [] },
+        category: "read",
+        findings: [],
+      }],
+    }), { verbose: true });
+    expect(output).toContain("shown in full");
+  });
+
+  it("shows finding details in verbose mode", () => {
+    const finding: AguaraFinding = {
+      severity: "HIGH", ruleId: "MCP_001", ruleName: "Prompt injection detected",
+      category: "prompt-injection", description: "Tool contains injection patterns",
+      matchedText: "ignore all", toolName: "evil_tool", remediation: "Remove injection patterns",
+    };
+    const output = formatOutput(makeScanResult({
+      aguara: { available: true, findings: [finding], summary: "1 finding" },
+    }), { verbose: true });
+    expect(output).toContain("MCP_001");
+    expect(output).toContain("Remove injection patterns");
+  });
+
+  it("shows aguara install hint when not available", () => {
+    const output = formatOutput(makeScanResult({
+      aguara: { available: false, findings: [], summary: "not installed" },
+    }));
+    expect(output).toContain("aguara");
+    expect(output).toContain("deep security analysis");
+  });
+
+  it("shows clean message when aguara has no findings", () => {
+    const output = formatOutput(makeScanResult({
+      aguara: { available: true, findings: [], summary: "0 findings" },
+    }));
+    expect(output).toContain("No security findings");
+  });
+});
+
+describe("formatDiff", () => {
+  it("shows no changes message when diff is empty", () => {
+    const diff: DiffResult = { server: "test-server", entries: [] };
+    const output = formatDiff(diff);
+    expect(output).toContain("No changes detected");
+  });
+
+  it("shows server name in header", () => {
+    const diff: DiffResult = { server: "my-server", entries: [] };
+    const output = formatDiff(diff);
+    expect(output).toContain("my-server");
+  });
+
+  it("shows added entries with + icon", () => {
+    const diff: DiffResult = {
+      server: "test",
+      entries: [{ kind: "added", area: "tool", name: "new_tool" }],
+    };
+    const output = formatDiff(diff);
+    expect(output).toContain("+");
+    expect(output).toContain("added");
+    expect(output).toContain("new_tool");
+  });
+
+  it("shows removed entries with - icon", () => {
+    const diff: DiffResult = {
+      server: "test",
+      entries: [{ kind: "removed", area: "tool", name: "old_tool" }],
+    };
+    const output = formatDiff(diff);
+    expect(output).toContain("-");
+    expect(output).toContain("removed");
+    expect(output).toContain("old_tool");
+  });
+
+  it("shows changed entries with ~ icon", () => {
+    const diff: DiffResult = {
+      server: "test",
+      entries: [{ kind: "changed", area: "tool", name: "mod_tool", detail: "description changed" }],
+    };
+    const output = formatDiff(diff);
+    expect(output).toContain("~");
+    expect(output).toContain("changed");
+    expect(output).toContain("description changed");
+  });
+
+  it("shows change count", () => {
+    const diff: DiffResult = {
+      server: "test",
+      entries: [
+        { kind: "added", area: "tool", name: "a" },
+        { kind: "removed", area: "tool", name: "b" },
+      ],
+    };
+    const output = formatDiff(diff);
+    expect(output).toContain("2 change(s)");
+  });
+});
+
+describe("formatPolicyResult", () => {
+  it("shows passed message when policy passes", () => {
+    const result: PolicyResult = { passed: true, violations: [] };
+    const output = formatPolicyResult(result, "my-server");
+    expect(output).toContain("my-server");
+    expect(output).toContain("policy passed");
+  });
+
+  it("shows FAILED and violation count when policy fails", () => {
+    const result: PolicyResult = {
+      passed: false,
+      violations: [
+        { rule: "deny.categories", message: "Tool delete_repo uses denied category: admin" },
+      ],
+    };
+    const output = formatPolicyResult(result, "my-server");
+    expect(output).toContain("policy FAILED");
+    expect(output).toContain("1 violation");
+    expect(output).toContain("deny.categories");
+    expect(output).toContain("delete_repo");
+  });
+
+  it("pluralizes violations correctly", () => {
+    const result: PolicyResult = {
+      passed: false,
+      violations: [
+        { rule: "deny.categories", message: "Violation 1" },
+        { rule: "deny.tools", message: "Violation 2" },
+      ],
+    };
+    const output = formatPolicyResult(result, "test");
+    expect(output).toContain("2 violations");
   });
 });
 
