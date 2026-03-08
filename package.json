@@ -1,7 +1,7 @@
 {
   "name": "mcp-sentinel",
   "version": "0.2.0",
-  "description": "Audit and enforce security policies on MCP servers — policy engine, drift detection, CI/CD gate",
+  "description": "Scan, score, and enforce security policies on MCP servers. Risk scoring (A-F), SARIF output, policy engine, drift detection, aguara integration, CI/CD gate.",
   "author": "Gustavo Aragon (@oktsec)",
   "license": "Apache-2.0",
   "type": "module",
@@ -57,7 +57,14 @@
     "ai-safety",
     "aguara",
     "llm",
-    "ai-agents"
+    "ai-agents",
+    "sarif",
+    "risk-score",
+    "claude",
+    "cursor",
+    "prompt-injection",
+    "tool-use",
+    "mcp-server"
   ],
   "homepage": "https://github.com/oktsec/mcp-sentinel#readme",
   "bugs": {
