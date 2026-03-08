@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type {
   ScanResult, AnalyzedTool, AguaraFinding, DiffResult, PolicyResult,
-  ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities,
+  ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities, RiskScore,
 } from "./types.js";
 
 const VERSION = "0.1.5";
@@ -75,6 +75,19 @@ function rightAlign(left: string, right: string, width: number): string {
 
 function divider(): string {
   return chalk.dim(`  ${"\u2500".repeat(WIDTH - 4)}`);
+}
+
+const GRADE_COLORS: Record<string, (t: string) => string> = {
+  A: chalk.green.bold,
+  B: chalk.green,
+  C: chalk.yellow,
+  D: chalk.red,
+  F: chalk.red.bold,
+};
+
+function formatGrade(riskScore: RiskScore): string {
+  const colorFn = GRADE_COLORS[riskScore.grade] ?? chalk.dim;
+  return `${colorFn(riskScore.grade)} ${chalk.dim(`(${riskScore.score}/100)`)}`;
 }
 
 function sortToolsByRisk(tools: AnalyzedTool[]): AnalyzedTool[] {
@@ -226,7 +239,7 @@ function sectionHeader(icon: string, title: string, count?: number): string {
 export function formatOutput(result: ScanResult, options: FormatOptions = {}): string {
   const lines: string[] = [];
   const verbose = options.verbose === true;
-  const { server, capabilities, tools, toolSummary, resources, resourceTemplates, prompts, instructions, aguara, scanDuration } = result;
+  const { server, capabilities, tools, toolSummary, resources, resourceTemplates, prompts, instructions, aguara, riskScore, scanDuration } = result;
 
   // Header
   lines.push("");
@@ -239,6 +252,7 @@ export function formatOutput(result: ScanResult, options: FormatOptions = {}): s
   if (aguara.available && aguara.rulesLoaded !== undefined) {
     lines.push(`  ${chalk.dim("Aguara")}        ${chalk.dim(`${aguara.rulesLoaded} rules loaded`)}`);
   }
+  lines.push(`  ${chalk.dim("Risk Score")}    ${formatGrade(riskScore)}`);
   lines.push("");
 
   // Tools (sorted by risk: admin first, then write, then read)

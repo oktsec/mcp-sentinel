@@ -92,6 +92,16 @@ export interface AguaraResult {
 
 // --- Scan result ---
 
+export interface RiskScore {
+  grade: "A" | "B" | "C" | "D" | "F";
+  score: number;
+  breakdown: {
+    toolRisk: number;
+    findingRisk: number;
+    surfaceRisk: number;
+  };
+}
+
 export interface ScanResult {
   server: ServerInfo;
   capabilities: ServerCapabilities;
@@ -102,6 +112,7 @@ export interface ScanResult {
   prompts: PromptInfo[];
   instructions: string | null;
   aguara: AguaraResult;
+  riskScore: RiskScore;
   scanDuration: number;
 }
 

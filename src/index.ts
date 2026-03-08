@@ -8,6 +8,7 @@ import {
 } from "./scanner.js";
 import { analyzeTools, summarize } from "./analyzer.js";
 import { scanWithAguara } from "./aguara.js";
+import { calculateScore } from "./score.js";
 import { formatOutput, formatJson, formatDiff, formatPolicyResult, formatError } from "./formatter.js";
 import { formatMarkdown } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
@@ -62,11 +63,17 @@ async function scanServer(target: ServerTarget, timeout: number, headers: string
     const tools = analyzeTools(rawTools, findingsByTool);
     const toolSummary = summarize(tools);
     const scanDuration = Date.now() - startTime;
+    const riskScore = calculateScore({
+      toolSummary,
+      toolCount: tools.length,
+      findings: aguara.findings,
+      hasInstructions: instructions !== null,
+    });
 
     return {
       server, capabilities, tools, toolSummary,
       resources, resourceTemplates, prompts, instructions,
-      aguara, scanDuration,
+      aguara, riskScore, scanDuration,
     };
   } finally {
     await disconnect(connection);
