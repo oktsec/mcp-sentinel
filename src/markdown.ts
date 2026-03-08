@@ -33,6 +33,7 @@ export function formatMarkdown(results: ScanResult[]): string {
     if (result.capabilities.prompts) caps.push("prompts");
     if (result.capabilities.logging) caps.push("logging");
     lines.push(`- **Capabilities:** ${caps.join(", ") || "none"}`);
+    lines.push(`- **Risk Score:** ${result.riskScore.grade} (${result.riskScore.score}/100)`);
     lines.push(`- **Scan time:** ${result.scanDuration}ms`);
     lines.push("");
 

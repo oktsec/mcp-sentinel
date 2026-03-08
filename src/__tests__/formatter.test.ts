@@ -13,6 +13,7 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
     prompts: [],
     instructions: null,
     aguara: { available: false, findings: [], summary: "aguara not installed" },
+    riskScore: { grade: "A", score: 100, breakdown: { toolRisk: 40, findingRisk: 40, surfaceRisk: 20 } },
     scanDuration: 500,
     ...overrides,
   };
@@ -108,6 +109,15 @@ describe("formatOutput", () => {
   it("includes scan duration", () => {
     const output = formatOutput(makeScanResult({ scanDuration: 1234 }));
     expect(output).toContain("1234ms");
+  });
+
+  it("shows risk score grade and numeric score", () => {
+    const output = formatOutput(makeScanResult({
+      riskScore: { grade: "B", score: 82, breakdown: { toolRisk: 34, findingRisk: 40, surfaceRisk: 8 } },
+    }));
+    expect(output).toContain("Risk Score");
+    expect(output).toContain("B");
+    expect(output).toContain("82/100");
   });
 });
 

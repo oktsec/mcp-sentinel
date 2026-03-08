@@ -1,6 +1,6 @@
 import type { CliOptions, ServerTarget } from "./types.js";
 
-const VERSION = "0.1.4";
+const VERSION = "0.2.0";
 
 const HELP = `
 mcp-sentinel v${VERSION}
@@ -19,7 +19,7 @@ TRANSPORTS
 
 OPTIONS
   --policy <file>      Enforce a security policy (.mcp-policy.yml auto-detected)
-  --config             Auto-detect servers from config files (Claude Desktop, Cursor, Windsurf)
+  --config             Auto-detect servers from config files (Claude Desktop, Cursor, Windsurf, VS Code, Zed)
   --transport <type>   Force transport type: stdio, sse, streamable-http
   --diff <file.json>   Compare current scan against a previous JSON scan
   --fail-on-findings   Exit with code 2 if aguara finds security issues (for CI)

@@ -13,6 +13,7 @@ function baseScan(overrides: Partial<ScanResult> = {}): ScanResult {
     prompts: [],
     instructions: null,
     aguara: { available: true, findings: [], summary: "0 finding(s)" },
+    riskScore: { grade: "A", score: 100, breakdown: { toolRisk: 40, findingRisk: 40, surfaceRisk: 20 } },
     scanDuration: 100,
     ...overrides,
   };
