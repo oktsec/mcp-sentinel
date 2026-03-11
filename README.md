@@ -12,7 +12,7 @@
   </p>
 </p>
 
-> **v0.2.0** -- Risk scoring (A-F), SARIF output, per-tool security analysis, verbose mode, HTTP header support
+> **v0.2.1** -- Security hardening, Unicode evasion defense, parameter-aware categorization, ReDoS prevention
 
 ---
 
@@ -29,12 +29,14 @@ MCP Sentinel connects to any MCP server, shows you every tool it exposes, assign
 - **Risk Scoring** -- A-F grade for every server based on tool risk, security findings, and attack surface
 - **Policy Engine** -- YAML-based deny/require/allow rules with glob patterns and auto-detection
 - **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (177 rules: prompt injection, exfiltration, credential leaks)
-- **Smart Categorization** -- Tools auto-escalate from "read" to "admin" when critical findings are detected
+- **Smart Categorization** -- Analyzes tool names, descriptions, and parameters; auto-escalates when critical findings are detected
 - **Multi-Transport** -- stdio, SSE, and Streamable HTTP with custom header support
 - **Config Discovery** -- Auto-scan servers from Claude Desktop, Cursor, Windsurf, VS Code, Zed
 - **CI/CD Ready** -- SARIF output for GitHub Code Scanning, exit codes for policy violations
 - **Drift Detection** -- Save baselines and detect added/removed/changed tools over time
 - **Multiple Exports** -- Terminal, JSON, Markdown, SARIF
+- **Unicode Evasion Defense** -- NFKC normalization prevents homoglyph and fullwidth character bypasses
+- **Hardened Inputs** -- Path traversal prevention, header injection blocking, ReDoS-safe policy patterns
 
 ## Quick Start
 
@@ -47,7 +49,7 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
 ```
 ┌──────────────────────────────┐
-│  MCP Sentinel v0.2.0         │
+│  MCP Sentinel v0.2.1         │
 └──────────────────────────────┘
 
   Server        secure-filesystem-server v0.2.0
