@@ -7,8 +7,8 @@ import { VERSION } from "../version.js";
 
 describe("scanner module", () => {
   describe("VERSION consistency", () => {
-    it("uses VERSION from version.ts matching 0.2.1", () => {
-      expect(VERSION).toBe("0.2.1");
+    it("uses VERSION from version.ts matching 0.2.2", () => {
+      expect(VERSION).toBe("0.2.2");
     });
   });
 
