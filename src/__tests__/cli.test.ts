@@ -31,7 +31,7 @@ describe("parseArgs", () => {
   it("returns null for --version flag", () => {
     const result = parseArgs(["node", "mcp-sentinel", "--version"]);
     expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith("0.2.2");
+    expect(consoleSpy).toHaveBeenCalledWith("0.2.3");
   });
 
   it("parses a single stdio server target", () => {

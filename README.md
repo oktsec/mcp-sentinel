@@ -35,7 +35,7 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
 ```
 ┌──────────────────────────────┐
-│  MCP Sentinel v0.2.2         │
+│  MCP Sentinel v0.2.3         │
 └──────────────────────────────┘
 
   Server        secure-filesystem-server v0.2.0
