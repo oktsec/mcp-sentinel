@@ -3,8 +3,7 @@ import type {
   ScanResult, AnalyzedTool, AguaraFinding, DiffResult, PolicyResult,
   ResourceInfo, ResourceTemplateInfo, PromptInfo, ServerCapabilities, RiskScore,
 } from "./types.js";
-
-const VERSION = "0.2.0";
+import { VERSION } from "./version.js";
 const WIDTH = 70;
 
 const CATEGORY_COLORS = {

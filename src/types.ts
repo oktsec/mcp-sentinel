@@ -88,6 +88,7 @@ export interface AguaraResult {
   summary: string;
   rulesLoaded?: number;
   durationMs?: number;
+  error?: boolean;
 }
 
 // --- Risk Score ---

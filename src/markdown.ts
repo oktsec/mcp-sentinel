@@ -1,11 +1,8 @@
 import type { ScanResult, AnalyzedTool } from "./types.js";
-
-function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max - 3) + "..." : text;
-}
+import { truncateText } from "./utils.js";
 
 function formatToolRow(analyzed: AnalyzedTool): string {
-  const desc = truncate(analyzed.tool.description, 80);
+  const desc = truncateText(analyzed.tool.description, 80);
   const params = analyzed.tool.parameters.map((p) => {
     const req = p.required ? "**" : "";
     return `${req}${p.name}${req} (${p.type})`;
@@ -73,7 +70,7 @@ export function formatMarkdown(results: ScanResult[]): string {
       lines.push("|--------|-------------|-----------|");
       for (const p of result.prompts) {
         const args = p.arguments.map((a) => `${a.required ? "**" : ""}${a.name}${a.required ? "**" : ""}`).join(", ");
-        lines.push(`| \`${p.name}\` | ${truncate(p.description, 60)} | ${args} |`);
+        lines.push(`| \`${p.name}\` | ${truncateText(p.description, 60)} | ${args} |`);
       }
       lines.push("");
     }

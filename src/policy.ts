@@ -107,17 +107,36 @@ function validatePolicy(raw: unknown): Policy {
   return { rules };
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function globToSafeRegex(pattern: string, flags?: string): RegExp | null {
+  try {
+    const escaped = escapeRegex(pattern).replace(/\\\*/g, ".*");
+    return new RegExp(escaped, flags);
+  } catch {
+    return null;
+  }
+}
+
 function matchesPattern(name: string, pattern: string): boolean {
   if (pattern.includes("*")) {
-    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-    return regex.test(name);
+    const inner = globToSafeRegex(pattern);
+    if (inner === null) return false;
+    try {
+      return new RegExp("^" + inner.source + "$").test(name);
+    } catch {
+      return false;
+    }
   }
   return name === pattern;
 }
 
 function matchesDescriptionPattern(description: string, pattern: string): boolean {
   if (pattern.includes("*")) {
-    const regex = new RegExp(pattern.replace(/\*/g, ".*"), "i");
+    const regex = globToSafeRegex(pattern, "i");
+    if (regex === null) return false;
     return regex.test(description);
   }
   return description.toLowerCase().includes(pattern.toLowerCase());
