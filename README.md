@@ -12,7 +12,7 @@
   </p>
 </p>
 
-> **v0.2.1** -- Security hardening, Unicode evasion defense, parameter-aware categorization, ReDoS prevention
+> Part of the [Aguara](https://github.com/garagon/aguara) security ecosystem by [Oktsec](https://github.com/oktsec)
 
 ---
 
@@ -23,20 +23,6 @@ You add an MCP server to Claude Desktop, Cursor, or your agent framework. Now th
 **You're trusting code you haven't reviewed.**
 
 MCP Sentinel connects to any MCP server, shows you every tool it exposes, assigns a risk score, and lets you define security policies that block dangerous ones automatically.
-
-### Features
-
-- **Risk Scoring** -- A-F grade for every server based on tool risk, security findings, and attack surface
-- **Policy Engine** -- YAML-based deny/require/allow rules with glob patterns and auto-detection
-- **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (177 rules: prompt injection, exfiltration, credential leaks)
-- **Smart Categorization** -- Analyzes tool names, descriptions, and parameters; auto-escalates when critical findings are detected
-- **Multi-Transport** -- stdio, SSE, and Streamable HTTP with custom header support
-- **Config Discovery** -- Auto-scan servers from Claude Desktop, Cursor, Windsurf, VS Code, Zed
-- **CI/CD Ready** -- SARIF output for GitHub Code Scanning, exit codes for policy violations
-- **Drift Detection** -- Save baselines and detect added/removed/changed tools over time
-- **Multiple Exports** -- Terminal, JSON, Markdown, SARIF
-- **Unicode Evasion Defense** -- NFKC normalization prevents homoglyph and fullwidth character bypasses
-- **Hardened Inputs** -- Path traversal prevention, header injection blocking, ReDoS-safe policy patterns
 
 ## Quick Start
 
@@ -49,7 +35,7 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
 ```
 ┌──────────────────────────────┐
-│  MCP Sentinel v0.2.1         │
+│  MCP Sentinel v0.2.2         │
 └──────────────────────────────┘
 
   Server        secure-filesystem-server v0.2.0
@@ -86,6 +72,42 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
   Scanned in 1706ms  ·  Deep scan: https://aguarascan.com
 ```
+
+## Features
+
+- **Risk Scoring** -- A-F grade for every server based on tool risk, security findings, and attack surface
+- **Policy Engine** -- YAML-based deny/require/allow rules with glob patterns and auto-detection
+- **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (177 rules: prompt injection, exfiltration, credential leaks)
+- **Smart Categorization** -- Analyzes tool names, descriptions, and parameters; auto-escalates when critical findings are detected
+- **Multi-Transport** -- stdio, SSE, and Streamable HTTP with custom header support
+- **Config Discovery** -- Auto-scan servers from Claude Desktop, Cursor, Windsurf, VS Code, Zed
+- **CI/CD Ready** -- SARIF output for GitHub Code Scanning, exit codes for policy violations
+- **Drift Detection** -- Save baselines and detect added/removed/changed tools over time
+- **Multiple Exports** -- Terminal, JSON, Markdown, SARIF
+- **Unicode Evasion Defense** -- NFKC normalization prevents homoglyph and fullwidth character bypasses
+- **Hardened Inputs** -- Path traversal prevention, header injection blocking, ReDoS-safe policy patterns
+
+## Deep Security Analysis with Aguara
+
+MCP Sentinel handles runtime introspection: connecting to servers, listing tools, categorizing risk, and enforcing policies. For deep security analysis, it integrates with [Aguara](https://github.com/garagon/aguara) -- an open source security scanner with 177 rules that detects prompt injection, data exfiltration, credential leaks, and more.
+
+When Aguara is installed, MCP Sentinel automatically:
+- Scans each tool individually and attributes findings to specific tools
+- Escalates tool categories based on findings (a "read" tool with a critical injection finding becomes "admin")
+- Reports severity, category, description, and remediation for each finding
+- Factors findings into the risk score
+
+```bash
+# Install Aguara (optional, recommended)
+curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
+
+# MCP Sentinel auto-detects it -- just scan as usual
+npx mcp-sentinel npx @modelcontextprotocol/server-filesystem /tmp
+```
+
+Add `require.aguara: clean` to your policy to enforce zero findings in CI.
+
+Without Aguara, MCP Sentinel still provides tool categorization, risk scoring, and policy enforcement based on built-in heuristics. With Aguara, you get full coverage of OWASP LLM Top 10 attack vectors.
 
 ## Risk Score
 
@@ -243,23 +265,6 @@ Pick one from [`examples/policies/`](examples/policies/) and customize:
 | [`strict.yml`](examples/policies/strict.yml) | Production -- blocks admin + write, requires security scan |
 | [`ci-pipeline.yml`](examples/policies/ci-pipeline.yml) | CI/CD -- blocks admin + deploy + push |
 
-## Deep Security Analysis with Aguara
-
-MCP Sentinel integrates with [Aguara](https://github.com/garagon/aguara), a security scanner with 177 rules that detects prompt injection, data exfiltration, credential leaks, and more.
-
-When Aguara is installed, MCP Sentinel:
-- Scans each tool individually and attributes findings to specific tools
-- Escalates tool categories based on findings (a "read" tool with a critical injection finding becomes "admin")
-- Reports severity, category, description, and remediation for each finding
-- Factors findings into the risk score
-
-```bash
-# Install Aguara (optional)
-curl -fsSL https://raw.githubusercontent.com/garagon/aguara/main/install.sh | bash
-```
-
-Once installed, MCP Sentinel auto-detects it. Add `require.aguara: clean` to your policy to enforce zero findings.
-
 ## All Options
 
 | Flag | Description |
@@ -300,16 +305,24 @@ Once installed, MCP Sentinel auto-detects it. Add `require.aguara: clean` to you
  (deny / require / allow)
 ```
 
-## Ecosystem
+## The Aguara Ecosystem
 
-MCP Sentinel is part of the [Aguara](https://github.com/garagon/aguara) security ecosystem:
+MCP Sentinel is built by [Oktsec](https://github.com/oktsec) as part of the [Aguara](https://github.com/garagon/aguara) security ecosystem -- a suite of open source tools designed to secure MCP servers and AI agent infrastructure.
 
 | Tool | What it does |
 |------|-------------|
-| **[Aguara](https://github.com/garagon/aguara)** | Security scanner -- 177 rules, NLP, toxic-flow analysis |
-| **[MCP Aguara](https://github.com/garagon/mcp-aguara)** | MCP server -- gives AI agents security scanning as a tool |
-| **MCP Sentinel** | Policy enforcement -- audit, score, enforce, and monitor MCP servers |
-| **[Aguara Watch](https://aguarascan.com)** | Cloud platform -- continuous monitoring of MCP registries |
+| **[Aguara](https://github.com/garagon/aguara)** | Security scanner -- 177 rules for prompt injection, exfiltration, credential leaks, supply chain attacks. The detection engine behind the ecosystem. |
+| **[MCP Sentinel](https://github.com/oktsec/mcp-sentinel)** | Runtime audit -- connect to live MCP servers, score risk, enforce policies, detect drift. Uses Aguara for deep analysis. |
+| **[MCP Aguara](https://github.com/garagon/mcp-aguara)** | MCP server -- gives AI agents security scanning as a tool. Wrap Aguara's 177 rules as an MCP tool your agent can call. |
+| **[Aguara Watch](https://aguarascan.com)** | Cloud platform -- continuous monitoring and security scanning of MCP servers across public registries. |
+
+### How they fit together
+
+- **Developing an MCP server?** Use `aguara` to scan your tool descriptions for security issues during development.
+- **Deploying MCP servers?** Use `mcp-sentinel` with a policy file in CI to gate deployments.
+- **Running AI agents?** Use `mcp-sentinel --config` to audit all servers your agent can access.
+- **Building AI agents?** Add `mcp-aguara` so your agent can self-audit the servers it connects to.
+- **Managing a fleet?** Use [Aguara Watch](https://aguarascan.com) for continuous monitoring across your organization.
 
 ## Contributing
 
@@ -317,4 +330,4 @@ Contributions welcome. Please open an issue first to discuss what you'd like to 
 
 ## License
 
-[Apache 2.0](LICENSE) -- Gustavo Aragon ([@oktsec](https://github.com/oktsec))
+[Apache 2.0](LICENSE) -- [Oktsec](https://github.com/oktsec) / Gustavo Aragon
