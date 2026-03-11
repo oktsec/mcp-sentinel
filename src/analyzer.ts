@@ -25,6 +25,21 @@ const DANGEROUS_CATEGORIES = new Set([
   "mcp-attack", "unicode-attack",
 ]);
 
+function normalizeText(text: string): string {
+  return text.normalize("NFKC");
+}
+
+function buildCategorizationText(tool: ToolInfo): string {
+  const parts = [tool.name, tool.description];
+  if (Array.isArray(tool.parameters)) {
+    for (const p of tool.parameters) {
+      parts.push(p.name);
+      if (p.description.length > 0) parts.push(p.description);
+    }
+  }
+  return normalizeText(parts.join(" "));
+}
+
 export function categorizeTool(tool: ToolInfo, findings?: AguaraFinding[]): ToolCategory {
   // If aguara found critical/high findings in dangerous categories, escalate to admin
   if (findings !== undefined && findings.length > 0) {
@@ -35,7 +50,7 @@ export function categorizeTool(tool: ToolInfo, findings?: AguaraFinding[]): Tool
     if (hasDangerous) return "admin";
   }
 
-  const text = `${tool.name} ${tool.description}`;
+  const text = buildCategorizationText(tool);
 
   if (ADMIN_HINTS.some((p) => p.test(text))) {
     return "admin";

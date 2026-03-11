@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 0.1.x   | Yes       |
+| 0.2.x   | Yes       |
+| 0.1.x   | No        |
 
 ## Reporting a Vulnerability
 
@@ -27,8 +28,10 @@ MCP Sentinel is a read-only scanning tool. It connects to MCP servers, queries t
 
 - Execute any tools on the target server
 - Send data to external services
-- Store scan results (unless `--markdown` is used to write a local file)
+- Store scan results (unless `--markdown` or `--sarif` is used to write a local file)
 - Require or collect authentication credentials
+
+When [aguara](https://github.com/garagon/aguara) is installed, MCP Sentinel writes tool descriptions to temporary files for analysis. These files are automatically cleaned up after scanning.
 
 ## Dependencies
 
@@ -36,5 +39,6 @@ We minimize dependencies and audit them regularly:
 
 - `@modelcontextprotocol/sdk` — Official MCP SDK from Anthropic
 - `chalk` — Terminal color output (no network, no filesystem)
+- `yaml` — YAML parser for policy files (no network, no filesystem)
 
 All dependencies are pinned via `package-lock.json` and checked with `npm audit`.

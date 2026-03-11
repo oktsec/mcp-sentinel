@@ -1,6 +1,5 @@
 import type { CliOptions, ServerTarget } from "./types.js";
-
-const VERSION = "0.2.0";
+import { VERSION } from "./version.js";
 
 const HELP = `
 mcp-sentinel v${VERSION}

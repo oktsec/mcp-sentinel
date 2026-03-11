@@ -1,11 +1,13 @@
 import { execFile } from "node:child_process";
 import { writeFile, unlink, mkdtemp, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import type { ToolInfo, ResourceInfo, ResourceTemplateInfo, PromptInfo, AguaraResult, AguaraFinding } from "./types.js";
 
 const execFileAsync = promisify(execFile);
+
+let aguaraInstalledCache: boolean | null = null;
 
 const SEV_LABELS: Record<number, string> = {
   4: "CRITICAL",
@@ -15,12 +17,20 @@ const SEV_LABELS: Record<number, string> = {
 };
 
 export async function isAguaraInstalled(): Promise<boolean> {
+  if (aguaraInstalledCache !== null) return aguaraInstalledCache;
   try {
     await execFileAsync("aguara", ["version"]);
+    aguaraInstalledCache = true;
     return true;
   } catch {
+    aguaraInstalledCache = false;
     return false;
   }
+}
+
+function sanitizeToolName(name: string): string {
+  const base = basename(name);
+  return base.replace(/[^a-zA-Z0-9_\-.]/g, "_");
 }
 
 function buildToolFile(tool: ToolInfo): string {
@@ -168,7 +178,8 @@ export async function scanWithAguara(input: AguaraScanInput): Promise<AguaraResu
     // Scan each tool individually for per-tool finding attribution
     for (const tool of input.tools) {
       const content = buildToolFile(tool);
-      const filePath = join(toolsDir, `${tool.name}.md`);
+      const safeName = sanitizeToolName(tool.name);
+      const filePath = join(toolsDir, `${safeName}.md`);
       await writeFile(filePath, content, "utf-8");
       filesToClean.push(filePath);
 
@@ -224,11 +235,13 @@ export async function scanWithAguara(input: AguaraScanInput): Promise<AguaraResu
       rulesLoaded: rulesLoaded > 0 ? rulesLoaded : undefined,
       durationMs: totalDuration > 0 ? totalDuration : undefined,
     };
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown error";
     return {
       available: true,
       findings: [],
-      summary: "aguara scan failed",
+      summary: `aguara scan error: ${message}`,
+      error: true,
     };
   } finally {
     for (const f of filesToClean) {

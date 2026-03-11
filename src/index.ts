@@ -1,4 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve, dirname } from "node:path";
+import { accessSync, constants } from "node:fs";
 import chalk from "chalk";
 import { parseArgs } from "./cli.js";
 import {
@@ -80,9 +82,35 @@ async function scanServer(target: ServerTarget, timeout: number, headers: string
   }
 }
 
+function isValidScanResult(obj: unknown): obj is ScanResult {
+  if (typeof obj !== "object" || obj === null) return false;
+  const r = obj as Record<string, unknown>;
+  if (typeof r["server"] !== "object" || r["server"] === null) return false;
+  const server = r["server"] as Record<string, unknown>;
+  if (typeof server["name"] !== "string") return false;
+  if (!Array.isArray(r["tools"])) return false;
+  if (typeof r["aguara"] !== "object" || r["aguara"] === null) return false;
+  return true;
+}
+
 async function loadBaseline(filePath: string): Promise<ScanResult> {
   const raw = await readFile(filePath, "utf-8");
-  return JSON.parse(raw) as ScanResult;
+  const parsed: unknown = JSON.parse(raw);
+  if (!isValidScanResult(parsed)) {
+    throw new Error(`Invalid baseline file: missing required fields (server, tools, aguara)`);
+  }
+  return parsed;
+}
+
+function validateOutputPath(filePath: string): string {
+  const resolved = resolve(filePath);
+  const dir = dirname(resolved);
+  try {
+    accessSync(dir, constants.W_OK);
+  } catch {
+    throw new Error(`Cannot write to directory: ${dir}`);
+  }
+  return resolved;
 }
 
 async function main(): Promise<void> {
@@ -150,14 +178,16 @@ async function main(): Promise<void> {
   }
 
   if (options.markdown !== false) {
+    const mdPath = validateOutputPath(options.markdown);
     const md = formatMarkdown(results);
-    await writeFile(options.markdown, md, "utf-8");
+    await writeFile(mdPath, md, "utf-8");
     console.log(`Report saved to ${options.markdown}`);
   }
 
   if (options.sarif !== false) {
+    const sarifPath = validateOutputPath(options.sarif);
     const sarifOutput = formatSarif(results);
-    await writeFile(options.sarif, sarifOutput, "utf-8");
+    await writeFile(sarifPath, sarifOutput, "utf-8");
     console.log(`SARIF report saved to ${options.sarif}`);
   }
 

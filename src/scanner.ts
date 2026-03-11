@@ -14,18 +14,26 @@ import type {
   PromptInfo,
   PromptArgument,
 } from "./types.js";
+import { VERSION } from "./version.js";
 
 export interface ScanConnection {
   client: Client;
   transport: Transport;
 }
 
+const FORBIDDEN_HEADER_CHARS = /[\r\n\0]/;
+
 function parseHeaders(headerStrings: string[]): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const h of headerStrings) {
     const idx = h.indexOf(":");
     if (idx > 0) {
-      headers[h.slice(0, idx).trim()] = h.slice(idx + 1).trim();
+      const name = h.slice(0, idx).trim();
+      const value = h.slice(idx + 1).trim();
+      if (FORBIDDEN_HEADER_CHARS.test(name) || FORBIDDEN_HEADER_CHARS.test(value)) {
+        throw new Error(`Invalid header value (contains forbidden characters): ${name}`);
+      }
+      headers[name] = value;
     }
   }
   return headers;
@@ -61,7 +69,7 @@ export async function connectToServer(
 
   const client = new Client({
     name: "mcp-sentinel",
-    version: "0.1.0",
+    version: VERSION,
   });
 
   const connectPromise = client.connect(transport);
