@@ -77,7 +77,7 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
 - **Risk Scoring** -- A-F grade for every server based on tool risk, security findings, and attack surface
 - **Policy Engine** -- YAML-based deny/require/allow rules with glob patterns and auto-detection
-- **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (177 rules: prompt injection, exfiltration, credential leaks)
+- **Deep Security Analysis** -- Per-tool scanning with [Aguara](https://github.com/garagon/aguara) (187 rules, 14 categories: prompt injection, exfiltration, credential leaks, supply chain exfiltration)
 - **Smart Categorization** -- Analyzes tool names, descriptions, and parameters; auto-escalates when critical findings are detected
 - **Multi-Transport** -- stdio, SSE, and Streamable HTTP with custom header support
 - **Config Discovery** -- Auto-scan servers from Claude Desktop, Cursor, Windsurf, VS Code, Zed
@@ -89,7 +89,7 @@ That's it. You'll see every tool the server exposes, categorized by risk:
 
 ## Deep Security Analysis with Aguara
 
-MCP Sentinel handles runtime introspection: connecting to servers, listing tools, categorizing risk, and enforcing policies. For deep security analysis, it integrates with [Aguara](https://github.com/garagon/aguara) -- an open source security scanner with 177 rules that detects prompt injection, data exfiltration, credential leaks, and more.
+MCP Sentinel handles runtime introspection: connecting to servers, listing tools, categorizing risk, and enforcing policies. For deep security analysis, it integrates with [Aguara](https://github.com/garagon/aguara) -- an open source security scanner with 187 rules across 14 categories that detects prompt injection, data exfiltration, credential leaks, supply chain exfiltration (.pth abuse, credential harvesting, K8s lateral movement), and more.
 
 When Aguara is installed, MCP Sentinel automatically:
 - Scans each tool individually and attributes findings to specific tools
@@ -296,7 +296,7 @@ Pick one from [`examples/policies/`](examples/policies/) and customize:
 │  Scan     │         └────────────────┘
 │  Score    │
 │  Enforce  │         ┌──────────────────┐
-│  Diff     │ ──────► │  Aguara (177      │
+│  Diff     │ ──────► │  Aguara (187      │
 │  Report   │         │  security rules)  │
 └───────────┘         └──────────────────┘
      │
@@ -311,9 +311,9 @@ MCP Sentinel is built by [Oktsec](https://github.com/oktsec) as part of the [Agu
 
 | Tool | What it does |
 |------|-------------|
-| **[Aguara](https://github.com/garagon/aguara)** | Security scanner -- 177 rules for prompt injection, exfiltration, credential leaks, supply chain attacks. The detection engine behind the ecosystem. |
+| **[Aguara](https://github.com/garagon/aguara)** | Security scanner -- 187 rules for prompt injection, exfiltration, credential leaks, supply chain exfiltration, and 10 more categories. Incident response commands (check/clean) for compromised packages. The detection engine behind the ecosystem. |
 | **[MCP Sentinel](https://github.com/oktsec/mcp-sentinel)** | Runtime audit -- connect to live MCP servers, score risk, enforce policies, detect drift. Uses Aguara for deep analysis. |
-| **[MCP Aguara](https://github.com/garagon/mcp-aguara)** | MCP server -- gives AI agents security scanning as a tool. Wrap Aguara's 177 rules as an MCP tool your agent can call. |
+| **[Aguara MCP](https://github.com/garagon/aguara-mcp)** | MCP server -- gives AI agents security scanning as a tool. Wrap Aguara's 187 rules as an MCP tool your agent can call. |
 | **[Aguara Watch](https://aguarascan.com)** | Cloud platform -- continuous monitoring and security scanning of MCP servers across public registries. |
 
 ### How they fit together
@@ -321,7 +321,7 @@ MCP Sentinel is built by [Oktsec](https://github.com/oktsec) as part of the [Agu
 - **Developing an MCP server?** Use `aguara` to scan your tool descriptions for security issues during development.
 - **Deploying MCP servers?** Use `mcp-sentinel` with a policy file in CI to gate deployments.
 - **Running AI agents?** Use `mcp-sentinel --config` to audit all servers your agent can access.
-- **Building AI agents?** Add `mcp-aguara` so your agent can self-audit the servers it connects to.
+- **Building AI agents?** Add `aguara-mcp` so your agent can self-audit the servers it connects to.
 - **Managing a fleet?** Use [Aguara Watch](https://aguarascan.com) for continuous monitoring across your organization.
 
 ## Contributing
