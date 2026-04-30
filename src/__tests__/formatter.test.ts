@@ -146,6 +146,32 @@ describe("formatOutput verbose mode", () => {
     expect(output).toContain("shown in full");
   });
 
+  // Tool descriptions come from the MCP server we are scanning and
+  // are not under our control. The sanitiser must not leave any
+  // "<script"-shaped substring in the rendered output: a
+  // well-formed tag, a malformed tag with no closing ">", and a
+  // nested-tag re-form attack all need to land safely.
+  it("strips angle-bracket markup from tool descriptions even when malformed", () => {
+    const payloads = [
+      "<script>alert(1)</script>",
+      "<scr<script>ipt>alert(2)</script>",
+      "<script alert(3)",                 // no closing ">"
+      "before <b>bold</b> after",         // legitimate inline markup
+    ];
+    for (const description of payloads) {
+      const output = formatOutput(makeScanResult({
+        tools: [{
+          tool: { name: "evil_tool", description, parameters: [] },
+          category: "read",
+          findings: [],
+        }],
+      }), { verbose: true });
+      expect(output, `payload ${JSON.stringify(description)} leaked < bytes`).not.toContain("<");
+      expect(output, `payload ${JSON.stringify(description)} leaked > bytes`).not.toContain(">");
+      expect(output).not.toContain("<script");
+    }
+  });
+
   it("shows finding details in verbose mode", () => {
     const finding: AguaraFinding = {
       severity: "HIGH", ruleId: "MCP_001", ruleName: "Prompt injection detected",
