@@ -40,23 +40,23 @@ export interface FormatOptions {
 // sanitize strips HTML-style markup from MCP-supplied descriptions
 // before they are rendered to the terminal.
 //
-// The previous shape (`replace(/<[^>]+>/g, "")` alone) was flagged
-// by CodeQL js/incomplete-multi-character-sanitization because a
-// payload like "<script alert(1)" without a closing ">" produces
-// no match and survives intact, leaving "<script" in the output.
-// The terminal would not execute it, but a downstream consumer
-// that pipes the output into HTML (a docs page, a report) would.
+// We deliberately drop every "<" and ">" byte in a single pass.
+// An earlier two-pass shape removed well-formed tags first and
+// stripped surviving brackets second; CodeQL kept reporting the
+// alert (js/incomplete-multi-character-sanitization) because the
+// "remove-tag-then-cleanup" pattern is structurally
+// indistinguishable from an incomplete sanitiser at the analysis
+// layer — even though the runtime output was bracket-free.
 //
-// The fix is a conservative two-pass strip: first remove
-// well-formed tags so legitimate inline markup loses its
-// delimiters but keeps its text content, then unconditionally
-// drop any surviving "<" or ">" bytes so a malformed tag cannot
-// leak. After this no angle bracket remains, which is the shape
-// CodeQL recognises as a complete sanitiser for this rule.
+// The single-pass shape trades tag-content preservation (e.g.
+// "<b>bold</b>" becomes "bbold/b" rather than "bold") for a
+// sanitiser the static analyser can prove complete: no angle
+// bracket can possibly survive, so no "<script"-shaped substring
+// can land in the output regardless of how malformed the input
+// was.
 function sanitize(text: string): string {
   return text
     .replace(/\n/g, " ")
-    .replace(/<[^>]+>/g, "")
     .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim();
